@@ -1,32 +1,29 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+ A C++ implementation of a streaming server that supports RTSP (Real Time Streaming Protocol) and RTCP (Real Time Control Protocol). 
+ Some key components include
+
+ReflectorSession: This class represents a session in the streaming server. 
+It is responsible for coordinating the various streams being broadcast,
+managing connections to clients, and cleaning up resources
+when they are no longer needed.
+
+ReflectorStream: This class represents a stream in a session.
+There can be one or more streams in the session,
+depending on how many streams are being broadcast by the source the server is reflecting.
+
+ReflectorOutput: This class represents the output being sent to one or more clients.
+It maintains status information about the packets that have been sent to each client.
+
+OSRefTable: This is a simple implementation of a reference count table 
+that keeps track of which streams have active connections. 
+Streams can be safely deleted when their reference count reaches zero.
+
+FileDeleter: This class is used to delete temporary files created during the streaming process.
+*/
 /*
     File:       ReflectorSession.cpp
 
-    Contains:   Implementation of object defined in ReflectorSession.h. 
-                    
+    Contains:   Implementation of object defined in ReflectorSession.h.                  
     
 
 */
@@ -76,12 +73,7 @@ FileDeleter::~FileDeleter()
     fFilePath.Ptr = NULL;
     fFilePath.Len = 0;
 }
-
-
-
 static OSRefTable*      sStreamMap = NULL;
-
-
 
 void ReflectorSession::Initialize()
 {
@@ -110,8 +102,6 @@ ReflectorSession::ReflectorSession(StrPtrLen* inSourceID, SourceInfo* inInfo)
         fRef.Set(fSourceID, this);
     }
 }
-
-
 ReflectorSession::~ReflectorSession()
 {
 #if REFLECTOR_SESSION_DEBUGGING
@@ -129,8 +119,7 @@ ReflectorSession::~ReflectorSession()
         Bool16 unregisterNow = (refCount == 1) ? true : false;
         
         //qtss_printf("ReflectorSession::~ReflectorSession stream index=%lu refcount=%lu\n",x,refCount);
-        //decrement the ref count
-        
+        //decrement the ref count        
         if (refCount > 0) // Refcount may be 0 if there was some error setting up the stream
             sStreamMap->Release(fStreamArray[x]->GetRef()); // decrement the refcount
             
@@ -177,8 +166,7 @@ QTSS_Error ReflectorSession::SetupReflectorSession(SourceInfo* inInfo, QTSS_Stan
     
     for (UInt32 x = 0; x < fSourceInfo->GetNumStreams(); x++)
     {
-        // For each ReflectorStream, check and see if there is one that matches
-        // this stream ID
+        // For each ReflectorStream, check and see if there is one that matches this stream ID
         char theStreamID[ReflectorStream::kStreamIDSize];
         StrPtrLen theStreamIDPtr(theStreamID, ReflectorStream::kStreamIDSize);
         ReflectorStream::GenerateSourceID(fSourceInfo->GetStreamInfo(x), &theStreamID[0]);
@@ -209,9 +197,8 @@ QTSS_Error ReflectorSession::SetupReflectorSession(SourceInfo* inInfo, QTSS_Stan
         {
             fStreamArray[x] = NEW ReflectorStream(fSourceInfo->GetStreamInfo(x));
             // Obviously, we may encounter an error binding the reflector sockets.
-            // If that happens, we'll just abort here, which will leave the ReflectorStream
-            // array in an inconsistent state, so we need to make sure in our cleanup
-            // code to check for NULL.
+            // If that happens, we'll just abort here, which will leave the ReflectorStream array in an inconsistent state,
+            // so we need to make sure in our cleanup code to check for NULL.
             QTSS_Error theError = fStreamArray[x]->BindSockets(inParams,inFlags, filterState, filterTimeout);
             if (theError != QTSS_NoErr)
             {   
@@ -223,8 +210,7 @@ QTSS_Error ReflectorSession::SetupReflectorSession(SourceInfo* inInfo, QTSS_Stan
                 
             // If the port was 0, update it to reflect what the actual RTP port is.
             fSourceInfo->GetStreamInfo(x)->fPort = fStreamArray[x]->GetStreamInfo()->fPort;
-            //qtss_printf("ReflectorSession::SetupReflectorSession fSourceInfo->GetStreamInfo(x)->fPort= %u\n",fSourceInfo->GetStreamInfo(x)->fPort);
-            
+           
             ReflectorStream::GenerateSourceID(fSourceInfo->GetStreamInfo(x), &theStreamID[0]);
 
             theError = sStreamMap->Register(fStreamArray[x]->GetRef());
@@ -233,9 +219,6 @@ QTSS_Error ReflectorSession::SetupReflectorSession(SourceInfo* inInfo, QTSS_Stan
             //unless we do this, the refcount won't increment (and we'll delete the session prematurely
             OSRef* debug = sStreamMap->Resolve(&theStreamIDPtr);
             Assert(debug == fStreamArray[x]->GetRef());
-
-            //UInt32 refCount = fStreamArray[x]->GetRef()->GetRefCount();
-            //qtss_printf("stream index=%lu refcount=%lu\n",x,refCount);
         
         }
         else    
@@ -258,7 +241,7 @@ void ReflectorSession::AddBroadcasterClientSession(QTSS_StandardRTSP_Params* inP
     for (UInt32 x = 0; x < fSourceInfo->GetNumStreams(); x++)
     {
         if (fStreamArray[x] != NULL)
-        {   //qtss_printf("AddBroadcasterSession=%lu\n",inParams->inClientSession);
+        {   
             ((ReflectorSocket*)fStreamArray[x]->GetSocketPair()->GetSocketA())->AddBroadcasterSession(inParams->inClientSession);
             ((ReflectorSocket*)fStreamArray[x]->GetSocketPair()->GetSocketB())->AddBroadcasterSession(inParams->inClientSession);
         }
@@ -271,8 +254,7 @@ void    ReflectorSession::FormatHTML(StrPtrLen* inURL)
     // Line looks like: Relay Source: 17.221.98.239, Ports: 5430 5432 5434
     static StrPtrLen sHTMLStart("<H2>Relay Source: ");
     static StrPtrLen sPorts(", Ports: ");
-    static StrPtrLen sHTMLEnd("</H2><BR>");
-    
+    static StrPtrLen sHTMLEnd("</H2><BR>");    
     // Begin writing the HTML
     fFormatter.Put(sHTMLStart);
     
