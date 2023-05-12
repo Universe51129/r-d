@@ -1,29 +1,3 @@
-
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-
 #ifndef kVersionString
 #include "revision.h"
 #endif
@@ -77,7 +51,6 @@ BroadcastLog::BroadcastLog( PLBroadcastDef* broadcastParms, StrPtrLen* defaultPa
 
 time_t BroadcastLog::WriteLogHeader(FILE *inFile)
 {
-    // Write a W3C compatable log header
     time_t calendarTime = ::time(NULL);
     Assert(-1 != calendarTime);
     if (-1 == calendarTime)
@@ -93,9 +66,7 @@ time_t BroadcastLog::WriteLogHeader(FILE *inFile)
     qtss_strftime(tempBuffer, sizeof(tempBuffer), "#Log File Created On: %m/%d/%Y %H:%M:%S\n", theLocalTime);
     this->WriteToLog(tempBuffer, !kAllowLogToRoll);
     tempBuffer[0] = '\0';
-    
-    // format a date for the startup time
-    
+
     char theDateBuffer[QTSSRollingLog::kMaxDateBufferSizeInBytes] = { 0 };
     Bool16 result = QTSSRollingLog::FormatDate(theDateBuffer, false);
     
@@ -112,7 +83,6 @@ time_t BroadcastLog::WriteLogHeader(FILE *inFile)
 
 void    BroadcastLog::LogInfo( const char* infoStr )
 {
-    // log a generic comment 
     char    strBuff[1024] = "# ";
     char    dateBuff[80] = "";
     
