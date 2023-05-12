@@ -1,27 +1,22 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+The purpose of this module is to provide a function for referencing movie files 
+based on the RTSP text protocol for HTTP GET requests.
+When a client requests a movie file,
+it returns a referenced movie file in RTSP text protocol if the file exists, 
+otherwise the request is ignored.
+
+This module contains some helper functions such as 
+url_strcpy function to copy strings and process URLs, 
+and some handler functions such as IsHTTPGet function to determine if it is an HTTP GET request, 
+SendTheResponse function to send HTTP responses 
+and RTSP text protocol referenced movie files, 
+and Filter function to handle QTSS. Filter function,
+which handles callbacks for the QTSS_RTSPFilter_Role role. 
+The Filter function is the core function of the module, 
+it will determine whether the request is a movie file request based on the URL of the client request, 
+if yes, it will send the RTSP text protocol reference movie file,
+otherwise it will ignore the request.
+*/
 /*
     File:       QTSSRefMovieModule.cpp
 
@@ -47,10 +42,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-//------------------------------------------------------------------------
-// STATIC DATA
-//------------------------------------------------------------------------
-
 static QTSS_ModulePrefsObject sPrefs = NULL;
 static QTSS_PrefsObject sServerPrefs = NULL;
 static QTSS_ServerObject sServer = NULL;
@@ -64,10 +55,6 @@ static Bool16 sDefaultRefMovieXferEnabled = true;
 static UInt32 sServerIPAddr = 0x74000001;			// 127.0.0.1
 static UInt16 sRTSPReplyPort = 0;
 static UInt16 sDefaultRTSPReplyPort = 0;
-
-//------------------------------------------------------------------------
-// FUNCTION PROTOTYPES
-//------------------------------------------------------------------------
 
 QTSS_Error QTSSRefMovieModuleDispatch(QTSS_Role inRole, QTSS_RoleParamPtr inParams);
 static QTSS_Error   Register(QTSS_Register_Params* inParams);
@@ -83,10 +70,6 @@ static Bool16 IsTunneledRTSP(StrPtrLen& theRequest);
 static Bool16 IsAdminURL(StrPtrLen& theUrl);
 static Bool16 ParseURL(StrPtrLen& theRequest, char* outURL, UInt16 maxlen);
 static Bool16 IsHomeDirURL(StrPtrLen& theUrl);
-
-//------------------------------------------------------------------------
-// MODULE FUNCTIONS IMPLEMENTATION
-//------------------------------------------------------------------------
 
 QTSS_Error QTSSRefMovieModule_Main(void* inPrivateArgs)
 {
@@ -259,8 +242,7 @@ QTSS_Error SendTheResponse(QTSS_RTSPSessionObject theSession, QTSS_StreamRef str
     return err;
 }
 
-// This determines if the specified movie file
-// exists at the designated path.
+// This determines if the specified movie file exists at the designated path.
 Bool16 FileExists(StrPtrLen& path, StrPtrLen& movie)
 {
     struct stat sb;
@@ -284,8 +266,7 @@ Bool16 FileExists(StrPtrLen& path, StrPtrLen& movie)
         return true;
 }
 
-// This determines if an incoming request is an HTTP GET
-// request.
+// This determines if an incoming request is an HTTP GET request.
 Bool16 IsHTTPGet(StrPtrLen& theRequest)
 {
     StrPtrLen token = theRequest;
@@ -380,8 +361,7 @@ QTSS_Error Filter(QTSS_Filter_Params* inParams)
         return QTSS_NoErr;
     }
     
-    // Make sure that this is not an admin request before
-    // we go any further.
+    // Make sure that this is not an admin request before we go any further.
     StrPtrLen movie(theURL);
     if (IsAdminURL(movie))
     {
@@ -403,16 +383,11 @@ QTSS_Error Filter(QTSS_Filter_Params* inParams)
     
     if (!isHomeDir && !FileExists(theMovieFolder, movie))
     {
-        // we couldn't find a file at the specified location
-        // so we will ignore this HTTP request and let some other module
-        // deal with the issue.
-        return QTSS_NoErr;
+         return QTSS_NoErr;
     }
     else
     {
-        // Eureka!!! We found a file at the specified location.
-        // We assume that it is a valid movie file and we send
-        // the client an RTSP text reference movie in the HTTP reply.
+        
         err = SendTheResponse(theSession,theRequest, movie);
     }
         
