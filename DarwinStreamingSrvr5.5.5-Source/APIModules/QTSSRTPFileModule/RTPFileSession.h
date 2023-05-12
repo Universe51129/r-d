@@ -1,36 +1,14 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
+ The RTPFileSession class implements the playback session interface for RTP media streams, 
+ while the RTPFile class is used to read and parse RTP media file information. 
+ GetNextPacket, AddTrack and Seek functions.
+ It also provides functions for querying RTP media stream information, 
+ such as GetMovieDuration, GetTrackDuration, GetTrackTimeScale, etc.
+ The RTPFile class implements functions for reading and parsing RTP media file information, 
+ such as GetMovieDuration, GetTrackDuration, GetTrackTimeScale, etc, 
+ GetMovieDuration, GetTrackDuration, GetTrackTimeScale, GetSDPFile, etc. 
+ These classes help implement the playback and parsing of RTP media streams
  */
-/*
-    File:       RTPFileSession.h
-
-    Contains:   
-                    
-    
-    
-*/
-
 #ifndef __RTPFILESESSIONH__
 #define __RTPFILESESSIONH__
 
@@ -45,13 +23,11 @@ class RTPFile;
 class RTPFileSession
 {
     public:
-
         // One per client
         
         RTPFileSession();
         ~RTPFileSession();
         
-        //
         // Class error codes
         enum ErrorCode
         {
@@ -62,14 +38,10 @@ class RTPFileSession
             errSeekToNonexistentTime    = 4
         };
 
-        //
-        // INITIALIZE
         ErrorCode   Initialize(StrPtrLen& inFilePath, Float32 inBufferSeconds);
         
-        //
         // ACCESSORS
         
-        //
         // Global information
         inline Float64          GetMovieDuration();
         inline StrPtrLen*       GetSDPFile();
@@ -77,19 +49,16 @@ class RTPFileSession
         inline StrPtrLen*       GetMoviePath();
         UInt64 GetAddedTracksRTPBytes() { return fAddedTracksRTPBytes; }
         
-        
-        //
+
         // Track functions
         inline Float64      GetTrackDuration(UInt32 inTrackID);
         inline UInt32       GetTrackTimeScale(UInt32 inTrackID);
 
         UInt16      GetNextTrackSequenceNumber(UInt32 inTrackID);
         UInt32      GetSeekTimestamp(UInt32 TrackID);
-        
-        //
+
         // MODIFIERS
-        
-        //
+
         // Track modifiers
         ErrorCode   AddTrack(UInt32 inTrackID);
         void        SetTrackSSRC(UInt32 inTrackID, UInt32 inSSRC)   { fTrackInfo[inTrackID].fSSRC = inSSRC; }
@@ -101,8 +70,7 @@ class RTPFileSession
         // GetNextPacket. Returns the transmit time for this packet
         Float64     GetNextPacket(UInt8** outPacket, UInt32* outPacketLength, void** outCookie);
 
-    private:
-        
+    private:        
         // Utility functions
         void SkipToNextPacket(RTPFilePacket* inCurPacket);
         void ReadAndAdvise();
@@ -124,7 +92,6 @@ class RTPFileSession
         };
         
         QTSS_Object                 fFileSource;
-        //OSFileSource              fFileSource;
         UInt64                      fFileLength;
         UInt64                      fCurrentPosition;
         
@@ -144,20 +111,15 @@ class RTPFileSession
         
         friend class RTPFile;
 };
-
-
-
 class RTPFile
 {
     public:
-
         // One per file
         
         RTPFile();
         ~RTPFile();
         
         RTPFileSession::ErrorCode   Initialize(const StrPtrLen& inFilePath);
-
         Float64     GetMovieDuration()  { return fHeader.fMovieDuration; }
         
         Float64     GetTrackDuration(UInt32 inTrackID);
@@ -221,7 +183,6 @@ inline UInt32   RTPFileSession::GetTrackTimeScale(UInt32 inTrackID)
 {
     return fFile->GetTrackTimeScale(inTrackID);
 }
-
 
 #endif
 
