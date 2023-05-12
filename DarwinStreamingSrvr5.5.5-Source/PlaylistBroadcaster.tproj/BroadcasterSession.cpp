@@ -1,36 +1,3 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-/*
-    File:       BroadcasterSession.cpp
-
-    Contains:   .  
-                    
-    
-    
-*/
-
 #include "BroadcasterSession.h"
 #include "OSMemory.h"
 #include "StrPtrLen.h"
@@ -189,7 +156,6 @@ char*   BroadcasterSession::GetNextPacket(UInt32 *packetLen, UInt8 *channel)
     char* thePacketData = NULL;
     *packetLen = 0;
     *channel = 0;
-    //qtss_printf("BroadcasterSession::GetNextPacket Q len=%lu\n",fPacketQueue.GetLength());
     OSQueueElem *thePacketQElemPtr = fPacketQueue.GetHead();
     if(thePacketQElemPtr != NULL)
     {   
@@ -292,7 +258,6 @@ OS_Error BroadcasterSession::SendWaitingPackets()
     
     while (fPacket != NULL)
     {   Bool16 getNext = false;
-        //qtss_printf("BroadcasterSession::Run- Broadcasting SendInterleavedWrite \n");
         Assert(fPacketLen <= RTSPClient::kReqBufSize);
         OSMutexLocker locker(fRTSPClient->GetMutex());
         theErr = fRTSPClient->SendInterleavedWrite(fChannel, (UInt16) fPacketLen, fPacket, &getNext);
@@ -305,20 +270,15 @@ OS_Error BroadcasterSession::SendWaitingPackets()
         {
             if (theErr == EAGAIN || theErr == EINPROGRESS)
             {   // keep the packet around and try again
-                //qtss_printf("BroadcasterSession::SendWaitingPackets- Broadcasting SendInterleavedWrite err=%ld Request Write Event\n",theErr);
                 break;      
             }
-            // some bad error bail.
             delete [] fPacket;
             fPacket = NULL;
             
             break;
         }
-        
-        // we sent the packet and may or may not have another packet to send
             
         fTimeoutTask.RefreshTimeout();
-        //qtss_printf("send channel=%u len=%lu\n",(UInt16)fChannel,fPacketLen);
     }
     
     return theErr;              
@@ -344,13 +304,12 @@ SInt64 BroadcasterSession::Run()
         Assert(theEvents == Task::kStartEvent);
     }
     
-    // 
     if (theEvents & Task::kTimeoutEvent)
     {
 #if BROADCAST_SESSION_DEBUG
         qtss_printf("Session timing out.\n");
 #endif
-#if __FreeBSD__ || __MacOSX__
+#if __FreeBSD__
         if (fTransportType != kTCPTransportType)
         {
             fTimeoutTask.RefreshTimeout();
@@ -369,9 +328,7 @@ SInt64 BroadcasterSession::Run()
         fTeardownImmediately = true;
         fState = kSendingTeardown;
     }
-                
-    //
-    // If we've been told to TEARDOWN, do so.
+
     if (theEvents & BroadcasterSession::kTeardownEvent && fState != kDone)
     {   
 
@@ -381,8 +338,7 @@ SInt64 BroadcasterSession::Run()
         fTeardownImmediately = true;
         fState = kSendingTeardown;
     }
-    
-    // We have been told to delete ourselves. Do so... NOW!!!!!!!!!!!!!!!
+
     if (theEvents & Task::kKillEvent || fTeardownImmediately)
     {
 #if BROADCAST_SESSION_DEBUG
@@ -397,10 +353,7 @@ SInt64 BroadcasterSession::Run()
             fState = kSendingTeardown;
         }
     }   
-    
-    // Refresh the timeout. There is some legit activity going on...
-    //fTimeoutTask.RefreshTimeout();
-    
+
     OS_Error theErr = OS_NoErr;
     
     while ((theErr == OS_NoErr) && (fState != kDone))
@@ -423,7 +376,6 @@ SInt64 BroadcasterSession::Run()
 #endif                                  
                 if (theErr == OS_NoErr)
                 {
-                    // Check that the ANNOUNCE response is a 200 OK. If not, bail
                     if (fRTSPClient->GetStatus() != 200)
                     {
                         theErr = ENOTCONN; // Exit the state machine
@@ -433,10 +385,7 @@ SInt64 BroadcasterSession::Run()
                     {
                         Assert(fControlType != kReliableUDPTransportType);
                             
-                        //                          
-                        //
-                        // We have valid SDP. If this is a UDP connection, construct a UDP
-                        // socket array to act as incoming sockets.
+                        // We have valid SDP. If this is a UDP connection, construct a UDP socket array to act as incoming sockets.
                         if ((fControlType == kUDPTransportType) && (fTransportType != kTCPTransportType))
                             this->SetupUDPSockets();
                         //
@@ -463,7 +412,6 @@ SInt64 BroadcasterSession::Run()
 #if BROADCAST_SESSION_DEBUG
                 qtss_printf("BroadcasterSession::kSendingSetup\n");
 #endif              
-                // The SETUP request is different depending on whether we are interleaving or not
                 if (fTransportType == kUDPTransportType)
                 {
                     theErr = fRTSPClient->SendUDPSetup(fSDPParser.GetStreamInfo(fNumSetups)->fTrackID,
@@ -480,17 +428,11 @@ SInt64 BroadcasterSession::Run()
                             qtss_printf("BroadcasterSession::kSendingSetup EAGAIN\n");
                         if  (theErr == EINPROGRESS)
                             qtss_printf("BroadcasterSession::kSendingSetup EINPROGRESS\n");
-                    
-        //              fSocket->GetSocket()->RequestEvent(EV_RE | EV_WR);
-        //              return 0;   
                     }
 #endif              
 
                 }
 
-                // If this SETUP request / response is complete, check for errors, and if
-                // it succeeded, move onto the next SETUP. If we're done setting up all tracks,
-                // move onto PLAY.
                 if (theErr == OS_NoErr)
                 {
                     if (fRTSPClient->GetStatus() != 200)
@@ -526,9 +468,7 @@ SInt64 BroadcasterSession::Run()
                 if  (theErr == EINPROGRESS)
                     qtss_printf("BroadcasterSession::SendReceive EINPROGRESS\n");
 #endif              
-                // If this PLAY request / response is complete, then we are done with setting
-                // up all the client crap. Now all we have to do is send the data until it's
-                // time to send the TEARDOWN
+
                 if (theErr == OS_NoErr)
                 {
                     if (fRTSPClient->GetStatus() != 200)
@@ -537,7 +477,6 @@ SInt64 BroadcasterSession::Run()
                         break;
                     }
                         
-                    // Mark down the SSRC for each track, if possible. 
                     for (UInt32 ssrcCount = 0; ssrcCount < fSDPParser.GetNumStreams(); ssrcCount++)
                     {
                         fStats[ssrcCount].fSSRC = fRTSPClient->GetSSRCByTrack(fSDPParser.GetStreamInfo(ssrcCount)->fTrackID);
@@ -548,8 +487,6 @@ SInt64 BroadcasterSession::Run()
                     fState = kBroadcasting;
                     sBroadcastingConnections++;
                     
-                    //
-                    // Start our duration timer. Use this to figure out when to send a teardown
                     fPlayTime = fLastRTCPTime = OS::Milliseconds();     
                 }
                 break;
@@ -558,7 +495,6 @@ SInt64 BroadcasterSession::Run()
             case kBroadcasting:
             {   
 #if BROADCAST_SESSION_DEBUG
-                //qtss_printf("BroadcasterSession::kBroadcasting\n");
 #endif              
                 theErr = OS_NoErr; // Ignore flow control errors here.          
                 static char buffer[256];
@@ -583,13 +519,10 @@ SInt64 BroadcasterSession::Run()
 
                 if (theErr != OS_NoErr)
                 {   
-                    // we've encountered some fatal error, bail.
-                    //qtss_printf("kBroadcasting FATAL ERROR err=%ld\n",theErr);
                     sBroadcastingConnections--;
                     break;
                 }
-                
-                // no Err and nothing left to do so got to sleep for awhile.
+
                 return fReadInterval;
             }
             
@@ -625,7 +558,6 @@ SInt64 BroadcasterSession::Run()
                 if (theErr != OS_NoErr)
                 {   
                     // we've encountered some fatal error, bail.
-                    //qtss_printf("FATAL ERROR err=%ld\n",theErr);
                     sBroadcastingConnections--;
                     break;
                 }
@@ -657,8 +589,6 @@ SInt64 BroadcasterSession::Run()
 #if BROADCAST_SESSION_DEBUG
                 qtss_printf("Sending TEARDOWN. Result = %lu. Response code = %lu\n", theErr, fRTSPClient->GetStatus());
 #endif              
-                // Once the TEARDOWN is complete, we are done, so mark ourselves as dead, and wait
-                // for the owner of this object to delete us
                 fState = kDone;
                 //exit (0);
                 break;
@@ -674,7 +604,6 @@ SInt64 BroadcasterSession::Run()
         if  (theErr == EINPROGRESS)
             qtss_printf("BroadcasterSession::EINPROGRESS\n");
 #endif              
-        //
         // Request an async event
         fSocket->GetSocket()->SetTask(this);
         fSocket->GetSocket()->RequestEvent(fSocket->GetEventMask() );
@@ -837,19 +766,10 @@ void    BroadcasterSession::ProcessMediaPacket( char* inPacket, UInt32 inLength,
     UInt16* theSeqNumP = (UInt16*)inPacket;
     UInt16 theSeqNum = ntohs(theSeqNumP[1]);
     
-//  UInt32* theSsrcP = (UInt32*)inPacket;
-//  UInt32 theSSRC = ntohl(theSsrcP[2]);
-    
     for (UInt32 x = 0; x < fSDPParser.GetNumStreams(); x++)
     {
         if (fSDPParser.GetStreamInfo(x)->fTrackID == inTrackID)
         {
-            // Check if this packet is even for our stream
-            //if (!fStats[x].fIsSSRCValid)
-            //  fStats[x].fSSRC = theSSRC; // If we don't know SSRC yet, just use first one we get
-            //if (theSSRC != fStats[x].fSSRC)
-            //  return;
-                
             fStats[x].fNumPacketsReceived++;
             fStats[x].fNumBytesReceived += inLength;
             
@@ -861,9 +781,6 @@ void    BroadcasterSession::ProcessMediaPacket( char* inPacket, UInt32 inLength,
                     theValidationDifference -= 2 * theValidationDifference; // take the absolute value
                 if (theValidationDifference > kSanitySeqNumDifference)
                 {
-                    //
-                    // If this sequence number is really far out of range, then just toss
-                    // the packet and increment our count of crazy packets
                     fStats[x].fNumThrownAwayPackets++;
                     return;
                 }
@@ -884,17 +801,12 @@ void    BroadcasterSession::ProcessMediaPacket( char* inPacket, UInt32 inLength,
             }
             
             UInt32 debugblah = 0;
-            
-            // Put this sequence number into the map to track packet loss
+             // Put this sequence number into the map to track packet loss
             while ((theSeqNum - fStats[x].fWrapSeqNum) > TrackStats::kSeqNumMapSize)
             {
                 debugblah++;
                 Assert(debugblah < 10);
 
-                // We've cycled through the entire map. Calculate packet
-                // loss on the lowest 50 indexes in the map (don't get too
-                // close to where we are lest we mistake out of order packets
-                // as packet loss)
                 UInt32 halfSeqNumMap = TrackStats::kSeqNumMapSize / 2;
                 UInt32 curIndex = (fStats[x].fWrapSeqNum + 1) % TrackStats::kSeqNumMapSize;
                 UInt32 numPackets = 0;
@@ -908,9 +820,7 @@ void    BroadcasterSession::ProcessMediaPacket( char* inPacket, UInt32 inLength,
                         numPackets++;
                     fStats[x].fSequenceNumberMap[curIndex] = 0;
                 }
-                
-                // We've figured out how many lost packets there are in the lower
-                // half of the map. Increment our counters.
+
                 fStats[x].fNumOutOfOrderPackets -= halfSeqNumMap - numPackets;
                 fStats[x].fNumLostPackets += halfSeqNumMap - numPackets;
                 fStats[x].fWrapSeqNum += (UInt16) halfSeqNumMap;
@@ -1042,13 +952,7 @@ void BroadcasterSession::SendReceiverReport()
     *(theWriter++) = htonl(0);
     //*(theWriter++) = htonl(trk[i].TrackSSRC);
     *(theWriter++) = htonl(0);
-    //if (trk[i].rtp_num_received > 0)
-    //  t = ((float)trk[i].rtp_num_lost / (float)trk[i].rtp_num_received) * 256;
-    //else
-    //  t = 0.0;
-    //temp = t;
-    //temp = (temp & 0xff) << 24;
-    //temp |= (trk[i].rtp_num_received & 0x00ffffff);
+    
     *(theWriter++) = htonl(0);
     //temp = (trk[i].seq_num_cycles & 0xffff0000) | (trk[i].last_seq_num & 0x0000ffff);
     //*(ia++) = toBigEndian_ulong(temp);
@@ -1065,20 +969,12 @@ void BroadcasterSession::SendReceiverReport()
     *(theWriter++) = htonl('QTSS');
     //*(ia++) = toBigEndian_ulong(trk[i].rcvrSSRC);
     *(theWriter++) = htonl(0);
-    *(theWriter++) = htonl(8);          // eight 4-byte quants below
+    *(theWriter++) = htonl(8);        
 #define RR 0x72720004
 #define PR 0x70720004
 #define PD 0x70640002
 #define PL 0x706C0004
     *(theWriter++) = htonl(RR);
-    //unsigned int now, secs;
-    //now = microseconds();
-    //secs = now - trk[i].last_rtcp_packet_sent_us / USEC_PER_SEC;
-    //if (secs)
-    //  temp = trk[i].bytes_received_since_last_rtcp / secs;
-    //else
-    //  temp = 0;
-    //*(ia++) = htonl(temp);
     *(theWriter++) = htonl(0);
     *(theWriter++) = htonl(PR);
     //*(ia++) = htonl(trk[i].rtp_num_received);
