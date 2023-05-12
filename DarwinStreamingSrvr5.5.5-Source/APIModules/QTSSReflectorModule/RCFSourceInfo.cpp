@@ -1,33 +1,16 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+Used to parse information about the source and forwarding target of a media stream.
+It mainly contains the process of parsing XML tags and 
+some helper function calls to extract the required information
+about the parameters of the media stream source and the forwarding target.
+The code also contains some operations such as allocating memory space and freeing memory.
+*/
 /*
     File:       RCFSourceInfo.cpp
 
     Contains:   Implementation of object defined in .h file
 
-    Copyright:  © 1998 by Apple Computer, Inc., all rights reserved.
+    Copyright:  Â© 1998 by Apple Computer, Inc., all rights reserved.
 
     
 
@@ -51,25 +34,7 @@ void RCFSourceInfo::SetName(const char* inName)
 RCFSourceInfo::~RCFSourceInfo()
 {
     if (fName != NULL)
-            delete fName;
-            
-        // Not necessary anymore as the destructor of the base class will take care
-    // of deleting all allocated memory for fOutputArray and fStreamArray
-    /*
-    if (fOutputArray != NULL)
-    {
-        for (UInt32 x = 0; x < fNumOutputs; x++)
-            delete [] fOutputArray[x].fPortArray;
-            
-        char* theOutputArray = (char*)fOutputArray;
-        delete [] theOutputArray;
-    }
-    if (fStreamArray != NULL)
-    {
-        char* theStreamArray = (char*)fStreamArray;
-        delete [] theStreamArray;
-    }
-    */
+            delete fName;    
 }
 
 void RCFSourceInfo::Parse(XMLTag* relayTag)
@@ -233,12 +198,6 @@ void RCFSourceInfo::ParseDestination(XMLTag* destTag, UInt32 index)
             fOutputArray[index].fBasePort = atoi(basePortStr);
         }
     }
-}
-
-void RCFSourceInfo::ParseAnnouncedDestination(XMLTag* destTag, UInt32 index)
-{
-    // should log some sort of error
-    // can't announce without an sdp
 }
 
 void RCFSourceInfo::AllocateOutputArray(UInt32 numOutputs)
