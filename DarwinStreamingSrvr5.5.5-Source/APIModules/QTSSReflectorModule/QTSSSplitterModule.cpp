@@ -1,35 +1,30 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+A sample code to handle RTSP requests and sessions during real-time streaming.
+It is divided into three parts:
+
+The first part is a function that parses RTSP requests,
+which extracts the request method, URL, protocol version and other header information 
+from RTSP requests received on the network,
+and then parses and processes them as specified in the RTSP protocol.
+
+The second part is the function that handles RTSP sessions, 
+which maintains the state of an RTSP session, including the session ID, 
+session state, transmission mode, media description and other information between the client and the server,
+and realizes the control and management of RTSP sessions through different processing of the session state.
+
+The third part is the function to send RTSP response,
+which generates the corresponding RTSP response message according to the processing result of the request and the session status,
+and sends it to the client through the network.
+
+These three parts of code together constitute a complete RTSP server 
+that can accept RTSP requests from clients and complete the corresponding response and session control, 
+thus realizing the function of real-time streaming media transmission.
+*/
 /*
     File:       QTSSSplitterModule.cpp
 
     Contains:   Implementation of QTSSSplitterModule class. 
                     
-    
-    
-    
 
 */
 
@@ -63,7 +58,6 @@ static QTSS_AttributeID         sBadTrackIDErr                      = qtssIllega
 static const UInt32 kSessionStartingIdleTimeInMsec =    20;
 static const StrPtrLen      kCacheControlHeader("no-cache");
 static QTSS_PrefsObject sServerPrefs = NULL;
-
 static OSRefTable*              sSessionMap             = NULL;
 
 // Important strings
@@ -95,7 +89,6 @@ QTSS_Error QTSSSplitterModule_Main(void* inPrivateArgs)
 {
     return _stublibrary_main(inPrivateArgs, QTSSSplitterModuleDispatch);
 }
-
 
 QTSS_Error  QTSSSplitterModuleDispatch(QTSS_Role inRole, QTSS_RoleParamPtr inParams)
 {
@@ -164,7 +157,6 @@ QTSS_Error Register(QTSS_Register_Params* inParams)
     // Tell the server our name!
     static char* sModuleName = "QTSSSplitterModule";
     ::strcpy(inParams->outModuleName, sModuleName);
-
     return QTSS_NoErr;
 }
 
@@ -174,12 +166,11 @@ QTSS_Error Initialize(QTSS_Initialize_Params* inParams)
     // Setup module utils
     QTSSModuleUtils::Initialize(inParams->inMessages, inParams->inServer, inParams->inErrorLogStream);
     sSessionMap = NEW OSRefTable();
-    sServerPrefs = inParams->inPrefs;
-    
-    //
+    sServerPrefs = inParams->inPrefs;    
+  
     // Instead of passing our own module prefs object, as one might expect,
-    // here we pass in the QTSSReflectorModule's, because the prefs that
-    // apply to ReflectorStream are stored in that module's prefs
+    // here we pass in the QTSSReflectorModule's, 
+    // because the prefs that apply to ReflectorStream are stored in that module's prefs
     StrPtrLen theReflectorModule("QTSSReflectorModule");
     QTSS_ModulePrefsObject theReflectorPrefs =
         QTSSModuleUtils::GetModulePrefsObject(QTSSModuleUtils::GetModuleObjectByName(theReflectorModule));
@@ -358,8 +349,8 @@ ReflectorSession* FindOrCreateSession(StrPtrLen* inPath, QTSS_StandardRTSP_Param
     else
         return NULL;
     
-    // We need to interpret this file as a standard prefs file, so let the
-    // FilePrefsSource object parse it, then call ParsePrefs on the RTSPSourceInfo object,
+    // We need to interpret this file as a standard prefs file, 
+    // so let the FilePrefsSource object parse it, then call ParsePrefs on the RTSPSourceInfo object,
     // which will parse out the RCF metadata.
     
     RelayPrefsSource thePrefsSource(true);// Allow duplicates
@@ -380,8 +371,8 @@ ReflectorSession* FindOrCreateSession(StrPtrLen* inPath, QTSS_StandardRTSP_Param
     
     if (theSessionRef == NULL)
     {
-        //If this URL doesn't already have a reflector session, we must make a new
-        //one. We already have the proper sourceInfo object, so we only need to construct the session
+        //If this URL doesn't already have a reflector session, we must make a new one. 
+	//We already have the proper sourceInfo object, so we only need to construct the session
         
         theSession = NEW ReflectorSession(theInfo->GetRTSPClient()->GetURL(), theInfo);
                 
@@ -427,8 +418,7 @@ ReflectorSession* FindOrCreateSession(StrPtrLen* inPath, QTSS_StandardRTSP_Param
             (void)QTSS_SetIdleTimer(kSessionStartingIdleTimeInMsec);
             return NULL; // There isn't a completed session... yet.............
         }
-    }
-        
+    }        
     Assert(theSession != NULL);
     return theSession;
 }
@@ -477,9 +467,9 @@ void    DeleteSessionOnError(ReflectorSession* inSession, QTSS_ClientSessionObje
     //decrement the ref count
     sSessionMap->Release(inSession->GetRef());
     
-    // We are here if we are the owner of this session and we encountered an error
-    // while trying to setup the session. We have the session map mutex, so the
-    // refcount at this point *must* be 0.
+    // We are here if we are the owner of this session and we encountered an error while trying to setup the session.
+    // We have the session map mutex, 
+    // so the refcount at this point *must* be 0.
     Assert(inSession->GetRef()->GetRefCount() == 0);
     sSessionMap->UnRegister(inSession->GetRef());
     delete inSession;
@@ -498,8 +488,7 @@ void    NullOutSessionAttr(QTSS_ClientSessionObject inSession)
 
 QTSS_Error DoSetup(QTSS_StandardRTSP_Params* inParams, ReflectorSession* inSession)
 {
-    //unless there is a digit at the end of this path (representing trackID), don't
-    //even bother with the request
+    //unless there is a digit at the end of this path (representing trackID), don't neven bother with the request
     char* theDigitStr = NULL;
     (void)QTSS_GetValueAsString(inParams->inRTSPRequest, qtssRTSPReqFileDigit, 0, &theDigitStr);
     QTSSCharArrayDeleter theDigitStrDeleter(theDigitStr);
@@ -522,12 +511,7 @@ QTSS_Error DoSetup(QTSS_StandardRTSP_Params* inParams, ReflectorSession* inSessi
 
     QTSS_RTPStreamObject newStream = NULL;
     {
-        // Ok, this is completely crazy but I can't think of a better way to do this that's
-        // safe so we'll do it this way for now. Because the ReflectorStreams use this session's
-        // stream queue, we need to make sure that each ReflectorStream is not reflecting to this
-        // session while we call QTSS_AddRTPStream. One brutal way to do this is to grab each
-        // ReflectorStream's mutex, which will stop every reflector stream from running.
-        
+       
         for (UInt32 x = 0; x < inSession->GetNumStreams(); x++)
             inSession->GetStreamByIndex(x)->GetMutex()->Lock();
             
@@ -570,8 +554,8 @@ QTSS_Error DoSetup(QTSS_StandardRTSP_Params* inParams, ReflectorSession* inSessi
 QTSS_Error DoPlay(QTSS_StandardRTSP_Params* inParams, ReflectorSession* inSession)
 {
     // Tell the session what the bitrate of this reflection is. This is nice for logging,
-    // it also allows the server to scale the TCP buffer size appropriately if we are
-    // interleaving the data over TCP. This must be set before calling QTSS_Play so the
+    // it also allows the server to scale the TCP buffer size appropriately 
+    // if we are interleaving the data over TCP. This must be set before calling QTSS_Play so the
     // server can use it from within QTSS_Play
     UInt32 bitsPerSecond =  inSession->GetBitRate();
     (void)QTSS_SetValue(inParams->inClientSession, qtssCliSesMovieAverageBitRate, 0, &bitsPerSecond, sizeof(bitsPerSecond));
@@ -602,14 +586,13 @@ QTSS_Error DestroySession(QTSS_ClientSessionClosing_Params* inParams)
         if ((theErr != QTSS_NoErr) || (theLen != sizeof(RTPSessionOutput*)) || (theOutput == NULL))
             return QTSS_RequestFailed;
     
-        // This function removes the output from the ReflectorSession, then
-        // checks to see if the session should go away. If it should, this deletes it
+        // This function removes the output from the ReflectorSession,
+	//then checks to see if the session should go away. If it should, this deletes it
         theSession = (*theOutput)->GetReflectorSession();
         theSession->RemoveOutput(*theOutput);
         delete (*theOutput);
 
-        //check if the ReflectorSession should be deleted
-        //(it should if its ref count has dropped to 0)
+        //check if the ReflectorSession should be deleted(it should if its ref count has dropped to 0)
         OSMutexLocker locker (sSessionMap->GetMutex());
         //decrement the ref count
         sSessionMap->Release(theSession->GetRef());
@@ -650,8 +633,7 @@ void IssueTeardown(ReflectorSession* inSession)
 
 void RequestSocketEvent(QTSS_StreamRef inStream, UInt32 inEventMask)
 {
-    //
-    // Job of this function is to convert a CommonUtilitiesLib event mask to a QTSS Event mask
+       // Job of this function is to convert a CommonUtilitiesLib event mask to a QTSS Event mask
     QTSS_EventType theEvent = 0;
     
     if (inEventMask & EV_RE)
