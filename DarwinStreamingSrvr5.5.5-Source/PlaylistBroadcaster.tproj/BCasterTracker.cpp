@@ -1,40 +1,3 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-
-/*
-    8.30.99 - changes for linux version
-            - IsProcessRunning changed
-            - fputs difference.
-            
-    8.2.99 rt
-        - changed BCasterTracker::BCasterTracker to 5 second open timer.
-        - no longer lists broadcasts that are not running. file is
-        cleaned up on next "stop"
-*/
-
-
 #include "BCasterTracker.h"
 #include "MyAssert.h"
 
@@ -72,7 +35,7 @@ void TestBCasterTracker(int x )
             error = tracker.Remove( x );
             
             if ( error )    // remove the xth item from the list.
-                qtss_printf( "Playlist Broadcast (%li) not found.\n", (long)x );
+                sss_printf( "Playlist Broadcast (%li) not found.\n", (long)x );
             else
                 tracker.Save();
         }
@@ -82,7 +45,7 @@ void TestBCasterTracker(int x )
         }
     }
     else
-        qtss_printf("PlaylistBroadcaster trackerfile open FAILED.\n");
+        sss_printf("PlaylistBroadcaster trackerfile open FAILED.\n");
 }
 
 static void ShowElement( PLDoubleLinkedListNode<TrackingElement>* ten,  void* userData)
@@ -94,10 +57,8 @@ static void ShowElement( PLDoubleLinkedListNode<TrackingElement>* ten,  void* us
         info = "";
     else
         info = ", (not running)";
-    
-    
-    //qtss_printf(  "[%li] %li %s%s\n", (long)*showIndex, (long)ten->fElement->mPID, ten->fElement->mName, info );
-    qtss_printf(  "[%3li] %s; pid: %li%s\n", (long)*showIndex, ten->fElement->mName,  (long)ten->fElement->mPID,  info );
+  
+    sss_printf(  "[%3li] %s; pid: %li%s\n", (long)*showIndex, ten->fElement->mName,  (long)ten->fElement->mPID,  info );
     
     
     *(int*)userData = *showIndex + 1;
@@ -112,17 +73,17 @@ void BCasterTracker::Show()
     
     if ( mTrackingList.GetNumNodes() )
     {
-        qtss_printf( "\n" );
-        qtss_printf( "Current Playlist Broadcasts\n" );
-        qtss_printf( " ID   Description file; Process ID\n" );
-        qtss_printf( "----------------------------------\n" );
+        sss_printf( "\n" );
+        sss_printf( "Current Playlist Broadcasts\n" );
+        sss_printf( " ID   Description file; Process ID\n" );
+        sss_printf( "----------------------------------\n" );
         
         // display the elements in the list
         mTrackingList.ForEach( ShowElement, &showIndex );
     }
     else
-    {   qtss_printf( "\n" );
-        qtss_printf( "- PlaylistBroadcaster: No Broadcasts running.\n" );
+    {   sss_printf( "\n" );
+        sss_printf( "- PlaylistBroadcaster: No Broadcasts running.\n" );
     }
     
 }
@@ -131,25 +92,11 @@ void BCasterTracker::Show()
 bool BCasterTracker::IsProcessRunning( pid_t pid )
 {
     bool                isRunning=false;
-    
-/*
-
-// Generic unix code
-
-    char    procPath[256];
-    qtss_sprintf( procPath, "ps -p%li | grep %li > %s ",(long)pid,(long)pid,gTrackerFileTempDataPath); 
-
-    int result = system(procPath);
-    if (0 == result)
-    {   isRunning = true;
-    }
-    
-*/
 
     // a no-grep version to find the pid
     
     char pidStr[32];
-    qtss_sprintf( pidStr, "%li",(long)pid);    
+    sss_sprintf( pidStr, "%li",(long)pid);    
     
     char procPath[64] = "ps -p";
     ::strcat( procPath, pidStr);    
@@ -176,12 +123,6 @@ bool BCasterTracker::IsProcessRunning( pid_t pid )
 bool IsProcessID( PLDoubleLinkedListNode<TrackingElement>*ten,  void* userData)
 {
 
-    /*
-        used by ForEachUntil to find a TrackingElement with a given Process ID
-        userData is a pointer to the process id we want find in our list.
-        
-    */
-    
     pid_t       pid;
     bool        isProcID = false;
     
@@ -199,11 +140,7 @@ int BCasterTracker::RemoveByProcessID( pid_t pid )
 {
     int                     error = -1;
     
-    // remove the element with the given process ID
-    // from the tracking list.
-    
-    // called by the app when it is going away.
-    // DO NOT kill the pid being passed in.
+    // remove the element with the given process ID from the tracking list.
         
     PLDoubleLinkedListNode<TrackingElement> *te;
     
@@ -222,19 +159,9 @@ int BCasterTracker::RemoveByProcessID( pid_t pid )
 
 static bool IsElementID( PLDoubleLinkedListNode<TrackingElement> */*ten*/,  void* userData)
 {
-    /*
-        used by ForEachUntil to find a TrackingElement with a given index number
-        userData is a pointer to the counter, initialized to the index we want
-        to find.
-        
-        we decrement it until is reaches zero.
-        
-    */
-    
+
     UInt32*     showIndex = (UInt32*)userData;
     bool        isItemId = false;
-    
-    // when the counter reduces to zero, return true.
     
     if ( *showIndex == 0 )
         isItemId = true;
@@ -251,16 +178,8 @@ int BCasterTracker::Remove( UInt32 itemID )
     int                     error = -1;
     UInt32                  itemIDIndex = itemID;
 
-    // KILL the process that is associated with the item
-    // id in our list.
-    
-    // remove the element with the given index in the list
-    // from the tracking list.
-
-
-    // itemID is zero based 
-    // set the index to the item number we want to find. Use ForEachUntil with IsElementID
-    // to count down through the elements until we get to the Nth element.
+    // KILL the process that is associated with the item id in our list.
+    // remove the element with the given index in the list from the tracking list.
     
     PLDoubleLinkedListNode<TrackingElement> *te;
     
@@ -281,9 +200,7 @@ int BCasterTracker::Remove( UInt32 itemID )
             error = OSThread::GetErrno();
         
             if ( error != ESRCH ) // no such process
-            {   
-                // we probably cannot kill this process because it is not ours
-                
+            {     
             
             }
             else
@@ -365,16 +282,8 @@ static bool SaveElement( PLDoubleLinkedListNode<TrackingElement>* ten,  void* us
     FILE*   fp = (FILE*) userData;
     char    buff[512];
     
-    /*
-        used by ForEachUntil to find a SaveElement each element to the tracking file.
-        userData is a pointer to the FILE of our open tracking file.
-            
-    */
-    
     qtss_sprintf( buff, "%li \"%s\"\n", (long)ten->fElement->mPID, ten->fElement->mName );
-    
-    // linux version of fputs returns <0 for err, or num bytes written
-    // mac os X version of fputs returns <0 for err, or 0 for no err
+
     if (::fputs( buff, fp ) < 0 )
         return true;
         
@@ -384,11 +293,7 @@ static bool SaveElement( PLDoubleLinkedListNode<TrackingElement>* ten,  void* us
 
 int BCasterTracker::Save()
 {   
-    /*
-        save each record in the the tracker to disk.
-        
-        return 0 on success, < 0 otherwise.
-    */
+/
     int error = -1;
     
     mEofPos = 0;
@@ -414,9 +319,7 @@ int BCasterTracker::Save()
 
 bool BCasterTracker::IsOpen()
 {
-    // return false if the file is not open, 
-    // true if the file is open.
-    
+  
     if ( mTrackerFile == NULL )
         return false;
      else
@@ -434,15 +337,7 @@ BCasterTracker::BCasterTracker( const char* name )
     time_t calendarTime  = 0;
     
     calendarTime = ::time(NULL) + 10;
-    
-    // wait a long time for access to the file.
-    // 2 possible loops  one to try to open ( and possible create ) the file
-    // the second to obtain an exclusive lock on the file.
-    
-    // the app should probably fail if this cannot be done within the alloted time
-    //qtss_printf("time=%ld\n",calendarTime);
-    
-    
+
     while ( mTrackerFile == NULL && calendarTime > ::time(NULL) ) 
     {   mTrackerFile = ::fopen( name, "r+" );
         if ( !mTrackerFile )
@@ -451,8 +346,6 @@ BCasterTracker::BCasterTracker( const char* name )
 
             if ( mTrackerFile )
             {
-                // let "everyone" read and write this file so that we can track
-                // all the broadcasters no matter which user starts them
                 (void)::chmod( name, S_IRUSR | S_IWUSR |  S_IRGRP | S_IWGRP |  S_IROTH | S_IWOTH );
                 
                 (void)::fclose(  mTrackerFile  );
@@ -474,8 +367,6 @@ BCasterTracker::BCasterTracker( const char* name )
             tempFile = ::fopen( gTrackerFileTempDataPath, "a+" );
             if ( tempFile )
             {
-                // let "everyone" read and write this file so that we can track
-                // all the broadcasters no matter which user starts them
                 (void)::chmod( gTrackerFileTempDataPath, S_IRUSR | S_IWUSR |  S_IRGRP | S_IWGRP |  S_IROTH | S_IWOTH );
             }
         }
@@ -526,7 +417,6 @@ BCasterTracker::BCasterTracker( const char* name )
         Assert(error == 0);
         do 
         {   
-            // get a line ( fgets adds \n+ 0x00 )
             
             if ( ::fgets( lineBuff, lineBuffSize, mTrackerFile ) == NULL )
                 break;
@@ -572,7 +462,4 @@ BCasterTracker::BCasterTracker( const char* name )
         
         mEofPos = ::ftell( mTrackerFile );
     }
-
-    // dtor closes file...
-
 }
