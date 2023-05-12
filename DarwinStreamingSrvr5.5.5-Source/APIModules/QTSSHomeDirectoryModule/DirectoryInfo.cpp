@@ -1,27 +1,16 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+This code implements a session list, 
+which mainly includes functions to add and remove sessions and calculate the current total bandwidth.
+The SessionListElement class represents the session element and contains a pointer to QTSS_ClientSessionObject 
+and some functions to determine if the sessions are the same, 
+get the bit rate of the current session, etc.
+
+The DirectoryInfo class is the session list class and contains a list of sessions
+and a mutex lock to protect them when adding or removing sessions.
+ 
+With the implementation of these functions,
+the session list can be managed efficiently and the current total bandwidth can be calculated.
+*/
 /*
     File:       DirectoryInfo.cpp
 
@@ -60,6 +49,7 @@ UInt32 SessionListElement::CurrentBitRate()
 	return *theBitRate;
 }
 
+// find a specific session in the session list
 static bool IsSession(PLDoubleLinkedListNode<SessionListElement>* node,  void* userData)
 {
 	/*
@@ -70,6 +60,7 @@ static bool IsSession(PLDoubleLinkedListNode<SessionListElement>* node,  void* u
 	return node->fElement->Equal((QTSS_ClientSessionObject *)userData);
 }
 
+//to calculate the total bandwidth. 
 static void AddCurrentBitRate(PLDoubleLinkedListNode<SessionListElement>* node,  void* userData)
 {
 	*(UInt64 *)userData += node->fElement->CurrentBitRate();
@@ -112,6 +103,7 @@ void DirectoryInfo::RemoveSession(QTSS_ClientSessionObject *sessionPtr)
 	fMutex.Unlock();	
 }
 
+//calculate the current total bandwidth, 
 UInt64 DirectoryInfo::CurrentTotalBandwidthInKbps()
 {
 	fMutex.Lock();
