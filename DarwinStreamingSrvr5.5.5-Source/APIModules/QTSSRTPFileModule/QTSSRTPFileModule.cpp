@@ -1,32 +1,28 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+Implemented an audio/video player based on the RTP protocol, 
+which includes the following main functions:
+
+Checking the message length and shortening it 
+so that it can be processed using the specified model.
+
+Adding and playing RTP streams, mainly through the SendPackets function, 
+which loops through to get the next RTP packet and determines
+if it should stop playing based on the stop time specified by the client.
+At the same time, the transmission time is adjusted according to the speed,
+and finally RTP packets are sent.
+
+Destroying the session is mainly implemented through the DestroySession function, 
+which is used to destroy the session and release resources.
+
+Overall, an audio/video player based on the RTP protocol is implemented 
+and ensures that it can be processed using the specified model by checking the message length 
+and shortening the message length. Also, audio and video playback is implemented by adding and playing RTP streams. 
+Finally, the relevant resources are released by destroying the session
+*/
 /*
     File:       QTSSFileModule.cpp
 
-    Contains:   Implementation of module described in QTSSFileModule.h. 
-                    
+    Contains:   Implementation of module described in QTSSFileModule.h.                     
 
 */
 
@@ -43,8 +39,6 @@
 #include "QTSSMemoryDeleter.h"
 
 #include "QTSS.h"
-
-
 struct FileSession
 {
     public:
@@ -63,11 +57,8 @@ struct FileSession
         Float64             fStopTime;
 };
 
-
-
 // ref to the prefs dictionary object
 static QTSS_ModulePrefsObject       sFileModulePrefs;
-
 static StrPtrLen sRTPSuffix(".rtp");
 static StrPtrLen sSDPHeader1("v=0\r\ns=");
 static StrPtrLen sSDPHeader2;
@@ -78,7 +69,6 @@ static const StrPtrLen              kCacheControlHeader("must-revalidate");
 // ATTRIBUTES IDs
 
 static QTSS_AttributeID sFileSessionAttr                = qtssIllegalAttrID;
-
 static QTSS_AttributeID sSeekToNonexistentTimeErr       = qtssIllegalAttrID;
 static QTSS_AttributeID sBadQTFileErr                   = qtssIllegalAttrID;
 static QTSS_AttributeID sExpectedDigitFilenameErr       = qtssIllegalAttrID;
@@ -104,8 +94,6 @@ static QTSS_Error DoSetup(QTSS_StandardRTSP_Params* inParamBlock);
 static QTSS_Error DoPlay(QTSS_StandardRTSP_Params* inParamBlock);
 static QTSS_Error SendPackets(QTSS_RTPSendPackets_Params* inParams);
 static QTSS_Error DestroySession(QTSS_ClientSessionClosing_Params* inParams);
-
-
 
 QTSS_Error QTSSRTPFileModule_Main(void* inPrivateArgs)
 {
@@ -167,7 +155,6 @@ QTSS_Error Register(QTSS_Register_Params* inParams)
     // Tell the server our name!
     static char* sModuleName = "QTSSRTPFileModule";
     ::strcpy(inParams->outModuleName, sModuleName);
-
     return QTSS_NoErr;
 }
 
@@ -175,9 +162,8 @@ QTSS_Error Initialize(QTSS_Initialize_Params* inParams)
 {
     QTSSModuleUtils::Initialize(inParams->inMessages, inParams->inServer, inParams->inErrorLogStream);
 
-    //
     // We need some prefs created and maintained by the QTSSFileModule,
-    // cuz we don't want to duplicate basically the same stuff
+    // we don't want to duplicate basically the same stuff
     StrPtrLen theFileModule("QTSSFileModule");
     sFileModulePrefs = QTSSModuleUtils::GetModulePrefsObject(QTSSModuleUtils::GetModuleObjectByName(theFileModule));
 
@@ -220,8 +206,8 @@ QTSS_Error Initialize(QTSS_Initialize_Params* inParams)
     StringFormatter sdpFormatter(sSDPHeader2);
     sdpFormatter.Put(sUHeader);
 
-    //if there are preferences for default URL & admin email, use those. Otherwise, build the
-    //proper string based on default dns name.
+    //if there are preferences for default URL & admin email, use those. Otherwise, 
+    // build the proper string based on default dns name.
     if (sdpURL.Len == 0)
     {
         sdpFormatter.Put(sHTTP);
@@ -266,7 +252,6 @@ QTSS_Error RereadPrefs()
     return QTSS_NoErr;
 }
 
-
 QTSS_Error ProcessRTSPRequest(QTSS_StandardRTSP_Params* inParams)
 {
     QTSS_RTSPMethod* theMethod = NULL;
@@ -297,15 +282,13 @@ QTSS_Error ProcessRTSPRequest(QTSS_StandardRTSP_Params* inParams)
             break;
         default:
             break;
-    }           
-
+    }    
     return QTSS_NoErr;
 }
 
 QTSS_Error DoDescribe(QTSS_StandardRTSP_Params* inParamBlock)
 {
-    // Check and see if this is a request we should handle. We handle all requests with URLs that
-    // end in a '.rtp'
+    // Check and see if this is a request we should handle. We handle all requests with URLs that end in a '.rtp'
     char* theFullPathStr = NULL;
     QTSS_Error theError = QTSS_GetValueAsString(inParamBlock->inRTSPRequest, qtssRTSPReqLocalPath, 0, &theFullPathStr);
 	QTSSCharArrayDeleter theFullPathDeleter(theFullPathStr);
@@ -317,9 +300,7 @@ QTSS_Error DoDescribe(QTSS_StandardRTSP_Params* inParamBlock)
         (!sRTPSuffix.NumEqualIgnoreCase(&theFullPath.Ptr[theFullPath.Len - sRTPSuffix.Len], sRTPSuffix.Len)))
         return QTSS_RequestFailed;
     
-    // It is, so let's set everything up...
-    
-    //
+
     // Get the FileSession for this DESCRIBE, if any.
     UInt32 theLen = sizeof(FileSession*);
     FileSession*    theFile = NULL;
@@ -329,7 +310,7 @@ QTSS_Error DoDescribe(QTSS_StandardRTSP_Params* inParamBlock)
 
     if ( theFile != NULL )  
     {
-        //
+      
         // There is already a file for this session. This can happen if there are multiple DESCRIBES,
         // or a DESCRIBE has been issued with a Session ID, or some such thing.
         
@@ -338,7 +319,6 @@ QTSS_Error DoDescribe(QTSS_StandardRTSP_Params* inParamBlock)
             delete theFile;
             theFile = NULL;
             
-            // NULL out the attribute value, just in case.
             (void)QTSS_SetValue(inParamBlock->inClientSession, sFileSessionAttr, 0, &theFile, sizeof(theFile));
         }
     }
@@ -363,8 +343,7 @@ QTSS_Error DoDescribe(QTSS_StandardRTSP_Params* inParamBlock)
     theSDPVec[1].iov_len = sSDPHeader1.Len;
     
     //filename goes here
-    //(void)QTSS_GetValuePtr(inParamBlock->inRTSPRequest, qtssRTSPReqFilePath, 0, (void**)&theSDPVec[2].iov_base, (UInt32*)&theSDPVec[2].iov_len);
-	char* filenameStr = NULL;
+	 char* filenameStr = NULL;
 	(void)QTSS_GetValueAsString(inParamBlock->inRTSPRequest, qtssRTSPReqFilePath, 0, &filenameStr);
     QTSSCharArrayDeleter filenameStrDeleter(filenameStr);
 	theSDPVec[2].iov_base = filenameStr;
@@ -401,12 +380,11 @@ QTSS_Error DoDescribe(QTSS_StandardRTSP_Params* inParamBlock)
 
 
     // Append the Last Modified header to be a good caching proxy citizen before sending the Describe
-    //(void)QTSS_AppendRTSPHeader(inParamBlock->inRTSPRequest, qtssLastModifiedHeader,
-    //                              theFile->fFile.GetQTFile()->GetModDateStr(), DateBuffer::kDateBufferLen);
+    
     (void)QTSS_AppendRTSPHeader(inParamBlock->inRTSPRequest, qtssCacheControlHeader,
                                     kCacheControlHeader.Ptr, kCacheControlHeader.Len);
 
-    //ok, we have a filled out iovec. Let's send it!
+    //have a filled out iovec , send it
     QTSSModuleUtils::SendDescribeResponse(inParamBlock->inRTSPRequest, inParamBlock->inClientSession,
                                                                     &theSDPVec[0], 8, totalSDPLength);  
 	
@@ -441,8 +419,7 @@ QTSS_Error DoSetup(QTSS_StandardRTSP_Params* inParamBlock)
     QTSS_Error theErr = QTSS_GetValue(inParamBlock->inClientSession, sFileSessionAttr, 0, (void*)&theFile, &theLen);
     if ((theErr != QTSS_NoErr) || (theLen != sizeof(FileSession*)))
     {
-        // This is possible, as clients are not required to send a DESCRIBE. If we haven't set
-        // anything up yet, set everything up
+        // This is possible, as clients are not required to send a DESCRIBE. If we haven't set anything up yet, set everything up
 		char* theFullPathStr = NULL;
         theErr = QTSS_GetValueAsString(inParamBlock->inRTSPRequest, qtssRTSPReqLocalPath, 0, &theFullPathStr);
         Assert(theErr == QTSS_NoErr);
@@ -461,8 +438,7 @@ QTSS_Error DoSetup(QTSS_StandardRTSP_Params* inParamBlock)
         theErr = QTSS_SetValue(inParamBlock->inClientSession, sFileSessionAttr, 0, &theFile, sizeof(theFile));
     }
 
-    //unless there is a digit at the end of this path (representing trackID), don't
-    //even bother with the request
+    //unless there is a digit at the end of this path (representing trackID), don't even bother with the request
     char* theDigitStr = NULL;
     (void)QTSS_GetValueAsString(inParamBlock->inRTSPRequest, qtssRTSPReqFileDigit, 0, &theDigitStr);
     QTSSCharArrayDeleter theDigitStrDeleter(theDigitStr);
@@ -537,11 +513,8 @@ QTSS_Error DoSetup(QTSS_StandardRTSP_Params* inParamBlock)
     theFile->fFile.SetTrackSSRC(theTrackID, *theTrackSSRC);
     theFile->fFile.SetTrackCookie(theTrackID, newStream);
     
-    //
     // Our array has now been updated to reflect the fields requested by the client.
     //send the setup response
-    //(void)QTSS_AppendRTSPHeader(inParamBlock->inRTSPRequest, qtssLastModifiedHeader,
-    //                          theFile->fFile.GetQTFile()->GetModDateStr(), DateBuffer::kDateBufferLen);
     (void)QTSS_AppendRTSPHeader(inParamBlock->inRTSPRequest, qtssCacheControlHeader,
                                 kCacheControlHeader.Ptr, kCacheControlHeader.Len);
 
@@ -582,9 +555,8 @@ QTSS_Error DoPlay(QTSS_StandardRTSP_Params* inParamBlock)
     //UInt32 bitsPerSecond =    (*theFile)->fFile.GetBytesPerSecond() * 8;
     //(void)QTSS_SetValue(inParamBlock->inClientSession, qtssCliSesMovieAverageBitRate, 0, &bitsPerSecond, sizeof(bitsPerSecond));
 
-    //
-    // For the purposes of the speed header, check to make sure all tracks are
-    // over a reliable transport
+  
+    // For the purposes of the speed header, check to make sure all tracks are over a reliable transport
     Bool16 allTracksReliable = true;
     
     // Set the timestamp & sequence number parameters for each track.
@@ -637,8 +609,7 @@ QTSS_Error DoPlay(QTSS_StandardRTSP_Params* inParamBlock)
     Assert(theAdjustedPlayTime != NULL);
     Assert(theLen == sizeof(SInt64));
     (*theFile)->fAdjustedPlayTime = *theAdjustedPlayTime;
-    
-    //
+  
     // This module supports the Speed header if the client wants the stream faster than normal.
     Float32 theSpeed = 1;
     theLen = sizeof(theSpeed);
@@ -658,7 +629,7 @@ QTSS_Error DoPlay(QTSS_StandardRTSP_Params* inParamBlock)
     
     if (theSpeed != 1)
     {
-        //
+      
         // If our speed is not 1, append the RTSP speed header in the response
         char speedBuf[32];
         qtss_sprintf(speedBuf, "%10.5f", theSpeed);
@@ -667,7 +638,6 @@ QTSS_Error DoPlay(QTSS_StandardRTSP_Params* inParamBlock)
                                     speedBufPtr.Ptr, speedBufPtr.Len);
     }
     
-    //
     // Record the requested start and stop time.
 
     (*theFile)->fStopTime = -1;
@@ -707,7 +677,6 @@ QTSS_Error SendPackets(QTSS_RTPSendPackets_Params* inParams)
             void* theCookie = NULL;
             Float64 theTransmitTime = (*theFile)->fFile.GetNextPacket((UInt8**)&(*theFile)->fPacketStruct.packetData, &(*theFile)->fNextPacketLen, &theCookie);
             
-            //
             // Check to see if we should stop playing based on a client specified stop time
             if (((*theFile)->fStopTime != -1) && (theTransmitTime > (*theFile)->fStopTime))
             {
@@ -717,7 +686,6 @@ QTSS_Error SendPackets(QTSS_RTPSendPackets_Params* inParams)
                 return QTSS_NoErr;
             }
 
-            //
             // Adjust transmit time based on speed
             Float64 theOffsetFromStartTime = theTransmitTime - (*theFile)->fStartTime;
             theTransmitTime = (*theFile)->fStartTime + (theOffsetFromStartTime / (*theFile)->fSpeed);
