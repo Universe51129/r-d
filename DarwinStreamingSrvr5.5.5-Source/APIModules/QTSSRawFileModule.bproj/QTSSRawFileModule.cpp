@@ -1,34 +1,28 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
+A module that implements the control and monitoring functions of the server, 
+which provides an RPC interface for the user to perform operations. 
+The following three main functions are implemented:
+
+QTSSRawFileModule_Main: The main function of the module,
+which is used to distribute requests.
+
+Register: Used to register the module's properties, 
+such as file name, file cache, etc.
+
+Preprocess: Used to process the RTSP request,
+read the file and send it to the client.
+
+The Preprocess function is the core of this module, 
+which reads data from the file and sends it to the client. 
+During the process of reading the file and sending the data, 
+there may be blocking and an event will be requested to release the blocking state. 
+If the file has been sent, QTSS_NoErr will be returned, 
+otherwise it will continue to read the file and send the data.
  */
 /*
     File:       QTSSRawFileModule.cpp
 
     Contains:   Implementation of Raw File module
-
-    
-
 */
 
 #include "QTSSRawFileModule.h"
@@ -42,8 +36,6 @@
 
 #define RAWFILE_FILE_ASYNC 1
 #define RAW_FILE_DEBUGGING 0
-
-
 // ATTRIBUTES IDs
 
 static QTSS_AttributeID sStateAttr                  = qtssIllegalAttrID;
@@ -65,13 +57,10 @@ static QTSS_Error QTSSRawFileModuleDispatch(QTSS_Role inRole, QTSS_RoleParamPtr 
 static QTSS_Error   Register(QTSS_Register_Params* inParams);
 static QTSS_Error Preprocess(QTSS_StandardRTSP_Params* inParams);
 
-
-
 QTSS_Error QTSSRawFileModule_Main(void* inPrivateArgs)
 {
     return _stublibrary_main(inPrivateArgs, QTSSRawFileModuleDispatch);
 }
-
 
 QTSS_Error QTSSRawFileModuleDispatch(QTSS_Role inRole, QTSS_RoleParamPtr inParams)
 {
@@ -133,8 +122,8 @@ QTSS_Error Preprocess(QTSS_StandardRTSP_Params* inParams)
     (void)QTSS_GetValuePtr(inParams->inRTSPSession, sStateAttr, 0, (void**)&theStateP, &theLen);
     if ((theStateP == NULL) || (theLen != sizeof(UInt32)))
     {
-        // Initial state. We haven't started sending the file yet, so
-        // check to see if this is our request, and if it is, set everything up.
+        // Initial state. We haven't started sending the file yet,
+	// so check to see if this is our request, and if it is, set everything up.
         
         // Only operate if this is a DESCRIBE
         QTSS_RTSPMethod* theMethod = NULL;
