@@ -1,36 +1,5 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-/*
-    File:       BroadcasterSession.h
-
-    
-*/
-
 #ifndef __BROADCASTER_SESSION__
 #define __BROADCASTER_SESSION__
-
 
 #include "Task.h"
 
@@ -71,21 +40,12 @@ class BroadcasterSession : public Task
                         Bool16 burst);
         virtual ~BroadcasterSession();
         
-        //
-        // Signals.
-        //
-        // Send a kKillEvent to delete this object.
-        // Send a kTeardownEvent to tell the object to send a TEARDOWN and abort
-        
         enum
         {
             kTeardownEvent = 0x00000100
         };
         
         virtual SInt64 Run();
-        
-        //
-        // States. Find out what the object is currently doing
         enum
         {
             kSendingAnnounce    = 0,
@@ -95,7 +55,6 @@ class BroadcasterSession : public Task
             kSendingTeardown    = 4,
             kDone               = 5
         };
-        //
         // Why did this session die?
         enum
         {
@@ -128,8 +87,7 @@ class BroadcasterSession : public Task
         UInt32                  GetReasonForDying() { return fDeathReason; }
         UInt32                  GetRequestStatus()  { return fRTSPClient->GetStatus(); }
         
-        // Tells you the total time we were receiving packets. You can use this
-        // for computing bit rate
+        // Tells you the total time we were receiving packets. You can use this for computing bit rate
         SInt64                  GetTotalPlayTimeInMsec() { return fTotalPlayTime; }
         
         QTSS_RTPPayloadType     GetTrackType(UInt32 inTrackIndex)
