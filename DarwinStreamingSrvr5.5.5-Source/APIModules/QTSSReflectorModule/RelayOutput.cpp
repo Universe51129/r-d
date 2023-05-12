@@ -1,33 +1,18 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+The BindSocket function opens a socket and binds it to a local port, 
+setting the time to live. 
+equal function compares the SourceInfo object with this RelayOutput object,
+returning true if they match, and appending a logic that checks the RTSPSourceInfo object.
+The WritePacket function sends RTP packets to the output socket and updates various statistics.
+the RelayAnnouncer and RunAnnounce functions handle forwarding output announcements and settings,
+including sending RTP and RTCP packets and updating the QTSS values in the RelaySessionObject.
+Finally, SetupRelayOutputObject sets all appropriate QTSS values for the forwarding output object, 
+including IP addresses, ports, and statistics.
+*/
 /*
     File:       RelayOutput.cpp
 
     Contains:   Implementation of object described in .h file
-                    
-    
 
 */
 
@@ -152,8 +137,7 @@ RelayOutput::RelayOutput(SourceInfo* inInfo, UInt32 inWhichOutput, RelaySession*
         fStreamCookieArray[x] = inRelaySession->GetStreamCookie(fTrackIDArray[x]);
     }
         
-    // Copy the contents of the output port array
-    
+    // Copy the contents of the output port array    
     if (inInfo->GetOutputInfo(inWhichOutput)->fPortArray != NULL)
     {
         UInt32 copySize = fNumStreams;
@@ -177,8 +161,8 @@ RelayOutput::RelayOutput(SourceInfo* inInfo, UInt32 inWhichOutput, RelaySession*
     RTSPOutputInfo* rtspInfo = NULL;
     if (isRTSPSourceInfo)
     {
-        // in the case of the announce source info, the passed in source info will have the new
-        // output information, but only the session's source info will have the sdp and url.
+        // in the case of the announce source info, the passed in source info will have the new output information,
+        // but only the session's source info will have the sdp and url.
         RTSPSourceInfo* rtspSourceInfo = (RTSPSourceInfo *)(inInfo);
         Assert(rtspSourceInfo != NULL);
         RTSPSourceInfo* sessionSourceInfo = (RTSPSourceInfo *)(inRelaySession->GetSourceInfo());
@@ -345,9 +329,8 @@ Bool16  RelayOutput::Equal(SourceInfo* inInfo)
             else if (rtspOutputInfo != NULL)
                 continue;
                                                 
-            // This is a rather special purpose function... here we set this
-            // flag marking this particular output as a duplicate, because
-            // we know it is equal to this object.
+            // This is a rather special purpose function... here we set this flag marking this particular output as a duplicate, 
+            // because we know it is equal to this object.
             // (This is used in QTSSReflectorModule.cpp:RereadRelayPrefs)
             inInfo->GetOutputInfo(x)->fAlreadySetup = true;
             return true;
@@ -403,8 +386,7 @@ QTSS_Error  RelayOutput::WritePacket(StrPtrLen* inPacket, void* inStreamCookie, 
         fLastUpdateTime = curTime;
         fLastPackets = fTotalPacketsSent;
         fLastBytes = fTotalBytesSent;
-    }
-    
+    }    
     return QTSS_NoErr;
 }
 
@@ -413,16 +395,14 @@ SInt64 RelayOutput::RelayAnnouncer::Run()
     OSMutexLocker locker(RelayOutput::GetQueueMutex());
     SInt64 result = -1;
     if (fOutput != NULL)
-        result = fOutput->RunAnnounce(); 
-        
+        result = fOutput->RunAnnounce();         
     return result;
 }
 
 SInt64 RelayOutput::RunAnnounce()
 {
     OS_Error err = OS_NoErr;
-    SInt64 result = 1000;
-    
+    SInt64 result = 1000;    
     if (fAnnounceState == kSendingAnnounce)
     {
         if (fOutgoingSDP == NULL || ::strlen(fOutgoingSDP) == 0)
@@ -478,8 +458,7 @@ SInt64 RelayOutput::RunAnnounce()
             UInt16 udpPort = fOutputInfo.fPortArray[index];
             err = QTSS_SetValue (fRelayOutputObject, sOutputUDPPorts, index, &udpPort, sizeof(udpPort));
             Assert(err == QTSS_NoErr);
-        }
-        
+        }        
         fDoingAnnounce = false;
         result = -1;    // let the task die
         fAnnounceTask = NULL;
@@ -497,11 +476,9 @@ SInt64 RelayOutput::RunAnnounce()
         fValid = false;
         result = -1;    // let the task die
         fAnnounceTask = NULL;
-    }
-    
+    }    
     if ( (-1 == result) && (NULL != fClientSocket) && (NULL != fClientSocket->GetSocket() ) )
         fClientSocket->GetSocket()->SetTask(NULL); //remove fAnnounceTask from event handling code. The task can be safely deleted after detaching from the socket.
-        
     return result;
 }
 
@@ -575,6 +552,5 @@ void RelayOutput::SetupRelayOutputObject(RTSPOutputInfo* inRTSPInfo)
     Assert(theErr == QTSS_NoErr);
     
     theErr = QTSS_UnlockObject (fRelaySessionObject);
-    Assert(theErr == QTSS_NoErr);
-        
+    Assert(theErr == QTSS_NoErr);        
 }
