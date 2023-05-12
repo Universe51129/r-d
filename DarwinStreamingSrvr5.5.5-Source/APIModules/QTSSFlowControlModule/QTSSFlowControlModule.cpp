@@ -1,34 +1,11 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+This code is a stream control module whose main function is to
+dynamically adjust the quality of the stream based on the quality of the RTP data stream. 
+*/
 /*
     File:       QTSSFlowControlModule.cpp
 
     Contains:   Implements object defined in .h file
-    
-
-    
     
 */
 
@@ -39,7 +16,6 @@
 #include "QTSSModuleUtils.h"
 #include "MyAssert.h"
 
-//Turns on printfs that are useful for debugging
 #define FLOW_CONTROL_DEBUGGING 0
 
 // ATTRIBUTES IDs
@@ -73,7 +49,6 @@ static Bool16   sModuleEnabled      = true;
 // Server preference we respect
 static Bool16   sDisableThinning       = false;
 
-
 // FUNCTION PROTOTYPES
 
 static QTSS_Error   QTSSFlowControlModuleDispatch(QTSS_Role inRole, QTSS_RoleParamPtr inParamBlock);
@@ -83,14 +58,14 @@ static QTSS_Error   RereadPrefs();
 static QTSS_Error   ProcessRTCPPacket(QTSS_RTCPProcess_Params* inParams);
 static void             InitializeDictionaryItems(QTSS_RTPStreamObject inStream);
 
-
-
-
+//The module main function, responsible for calling the module dispatch function QTSSFlowControlModuleDispatch.
 QTSS_Error QTSSFlowControlModule_Main(void* inPrivateArgs)
 {
     return _stublibrary_main(inPrivateArgs, QTSSFlowControlModuleDispatch);
 }
 
+//The corresponding functions are called according to different roles, including registering, 
+//initializing, re-reading configuration and handling RTP packages.
 QTSS_Error  QTSSFlowControlModuleDispatch(QTSS_Role inRole, QTSS_RoleParamPtr inParamBlock)
 {
     switch (inRole)
@@ -107,13 +82,13 @@ QTSS_Error  QTSSFlowControlModuleDispatch(QTSS_Role inRole, QTSS_RoleParamPtr in
     return QTSS_NoErr;
 }
 
+//Register function to complete role addition and attribute addition.
 QTSS_Error Register(QTSS_Register_Params* inParams)
 {
     // Do role setup
     (void)QTSS_AddRole(QTSS_Initialize_Role);
     (void)QTSS_AddRole(QTSS_RTCPProcess_Role);
-    (void)QTSS_AddRole(QTSS_RereadPrefs_Role);
-    
+    (void)QTSS_AddRole(QTSS_RereadPrefs_Role);    
 
     // Add other attributes
     static char*        sNumLossesAboveToleranceName    =   "QTSSFlowControlModuleLossAboveTol";
@@ -136,6 +111,8 @@ QTSS_Error Register(QTSS_Register_Params* inParams)
     return QTSS_NoErr;
 }
 
+//initialize function, get module parameters and server parameters, 
+//call RereadPrefs function to initialize parameters.
 QTSS_Error Initialize(QTSS_Initialize_Params* inParams)
 {
     QTSSModuleUtils::Initialize(inParams->inMessages, inParams->inServer, inParams->inErrorLogStream);
@@ -144,9 +121,10 @@ QTSS_Error Initialize(QTSS_Initialize_Params* inParams)
     sPrefs = QTSSModuleUtils::GetModulePrefsObject(inParams->inModule);
     return RereadPrefs();
 }
+
+//re-read the configuration
 QTSS_Error RereadPrefs()
 {
-    //
     // Use the standard GetPref routine to retrieve the correct values for our preferences
     QTSSModuleUtils::GetAttribute(sPrefs, "loss_thin_tolerance",    qtssAttrDataTypeUInt32,
                                 &sLossThinTolerance, &sDefaultLossThinTolerance, sizeof(sLossThinTolerance));
@@ -188,37 +166,16 @@ QTSS_Error ProcessRTCPPacket(QTSS_RTCPProcess_Params* inParams)
         qtss_printf("Unknown track reporting\n");
 #endif
 
-    //
-    // Find out if this is a qtssRTPTransportTypeUDP. This is the only type of
-    // transport we should monitor
+   
+    // Find out if this is a qtssRTPTransportTypeUDP. This is the only type of transport we should monitor
     QTSS_RTPTransportType theTransportType = qtssRTPTransportTypeUDP;
     UInt32 theLen = sizeof(theTransportType);
     QTSS_Error theErr = QTSS_GetValue(inParams->inRTPStream, qtssRTPStrTransportType, 0, (void*)&theTransportType, &theLen);
     Assert(theErr == QTSS_NoErr);
     
     if (theTransportType != qtssRTPTransportTypeUDP)
-        return QTSS_NoErr;
-        
-    //ALGORITHM FOR DETERMINING WHEN TO MAKE QUALITY ADJUSTMENTS IN THE STREAM:
-    
-    //This routine makes quality adjustment determinations for the server. It is designed
-    //to be flexible: you may swap this algorithm out for another implemented in another module,
-    //and this algorithm uses settings that are adjustable at runtime.
-    
-    //It uses the % loss statistic in the RTCP packets, as well as the "getting better" &
-    //"getting worse" fields.
-
-    //Less bandwidth will be served if the loss % of N number of RTCP packets is above M, where
-    //N and M are runtime settings.
-    
-    //Less bandwidth will be served if "getting worse" is reported N number of times.
-    
-    //More bandwidth will be served if the loss % of N number of RTCPs is below M.
-    //N will scale up over time.
-    
-    //More bandwidth will be served if the client reports "getting better"
-    
-    //If the initial values of our dictionary items aren't yet in, put them in.
+        return QTSS_NoErr;        
+   
     InitializeDictionaryItems(inParams->inRTPStream);
     
     QTSS_RTPStreamObject theStream = inParams->inRTPStream;
