@@ -1,27 +1,13 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+A number of enumeration types, structs and function prototypes are defined to 
+control the server and to obtain properties of the server.
+Different property definitions for AFP servers and QTSS servers are included.
+Specifically, these include server types, connection types, sharepoint types, 
+property types, etc.
+The function prototypes include iterators for creating and deleting connections, 
+sharepoints and warnings, getting server properties, 
+setting server properties, sending messages, registering events, etc.
+*/
 
 #ifndef SERVERCONTROLAPI_H
 #define SERVERCONTROLAPI_H
@@ -335,26 +321,17 @@ SCErr SCCancelStopServer(ServerRef server);
 
 SCErr SCAddVolume(fsvolid_t hfsVolID);
 SCErr SCForgetVolume(fsvolid_t hfsVolID);
-
-//SCErr GetSimpleServerAttribute(ServerRef server, AttributeType attrib, long* value);
 SCErr GetServerAttribute(ServerRef server, AttributeType attrib, u_int32_t tagSize, void* tags, int bufSize, int* attribSize, void* buffer);
-
-//SCErr SetSimpleServerAttribute(ServerRef server, AttributeType attrib, long value);
-//SCErr SetServerAttribute(ServerRef server, AttributeType attrib, int attribSize, void* buffer);
 SCErr SetServerAttribute(ServerRef server, AttributeType attrib, u_int32_t tagSize, void* tags, int bufSize, void* buffer);
 
 SCErr CreateConnectionIter(ServerRef server, ConnectionIterRef* iter);
 SCErr DeleteConnectionIter(ConnectionIterRef iter);
 SCErr GetNextConnection(ConnectionIterRef iter, ConnectionRef* con);
-
-//SCErr GetSimpleConnectionAttribute(ConnectionRef con, AttributeType attrib, long* value);
 SCErr GetConnectionAttribute(ConnectionRef con, AttributeType attrib, int bufSize, int* attribSize, void* buffer);
 
 SCErr CreateSharePointIter(ServerRef server, int sharePointType, SharePointIterRef* iter);
 SCErr DeleteSharePointIter(SharePointIterRef iter);
 SCErr GetNextSharePoint(SharePointIterRef iter, SharePointRef* con);
-
-//SCErr GetSimpleSharePointAttribute(SharePointRef con, AttributeType attrib, long* value);
 SCErr GetSharePointAttribute(SharePointRef con, AttributeType attrib, int bufSize, int* attribSize, void* buffer);
 
 SCErr CreateWarningsIter(ServerRef server, WarningsIterRef* iter);
