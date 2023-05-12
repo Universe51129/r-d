@@ -1,26 +1,11 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
+This code is an implementation of the QTSSvrControlModule module,
+which provides the functionality to control the QTSS server. 
+This includes operations such as registration, initialization, and shutdown,
+and defines a number of RPC interfaces for the user to perform operations.
+The QTSSvrControlThread class is used to start the control thread and implements the destructor, Entry,
+and HistoryEntry functions. The code implements functions to get and set server properties, 
+server status information, and some interfaces to control the server
  */
 /*
     File:       QTSSvrControlModule.cpp
@@ -93,7 +78,6 @@ class QTSSvrControlThread
 
 
 // STATIC DATA
-
 static OSMutex*             sHistoryMutex = NULL;
 static QTSSvrControlThread* sThread = NULL;
 static UInt32               sCursor = 0;//where do we write next into the history array?
@@ -234,7 +218,6 @@ QTSS_Error Initialize(QTSS_Initialize_Params* inParams)
         return QTSS_RequestFailed;
     }
     return QTSS_NoErr;
-
 }
 
 QTSS_Error Shutdown()
@@ -243,9 +226,6 @@ QTSS_Error Shutdown()
         delete sThread;
     return QTSS_NoErr;
 }
-
-
-
 kern_return_t StopServer(int inMinutes)
 {
     //if time is -1, we're supposed to wait until all clients have disconnected
@@ -469,9 +449,8 @@ kern_return_t GetServerVersion(QTSServerVersionRec* outServerVersion)
     
     if ((theServerVersion.Ptr != NULL) && (theServerVersion.Len > 0))
     {
-        //
-        // Convert the server version string to a long. Look for and extract major, minor, very minor
-        // revision number
+        
+        // Convert the server version string to a long. Look for and extract major, minor, very minor revision number
         StringParser theVersionParser(&theServerVersion);
         outServerVersion->serverVersion = theVersionParser.ConsumeInteger(NULL);
         outServerVersion->serverVersion <<= 8;
@@ -549,9 +528,9 @@ kern_return_t GetRefuseConnections(QTSRefuseConnectionsRec* outRefuseConnections
 
 kern_return_t SetRefuseConnections(QTSRefuseConnectionsRec* inRefuseConnections)
 {
-    //make sure not to allow people to stop the server from refusing connections when it
-    //is in the process of a graceful shutdown. The only way to stop this is to call
-    //CancelStopServer
+    //make sure not to allow people to stop the server from refusing connections
+    // when it is in the process of a graceful shutdown.
+    // The only way to stop this is to call CancelStopServer
     if (sGracefulShutdownInProgress)
         return SCServerShuttingDown;
 
@@ -572,8 +551,7 @@ kern_return_t GetHistory(QTSServerHistoryRec* outHistory)
     //copy the current state of the array into this parameter
 
 #if DEBUG
-    //if we haven't filled up the array yet, make sure that the cursor is
-    //one ahead of the size
+    //if we haven't filled up the array yet, make sure that the cursor is one ahead of the size
     if (sHistoryArray.numEntries < kQTSHistoryArraySize)
         Assert(sCursor == (UInt32)sHistoryArray.numEntries);
 #endif
@@ -599,7 +577,7 @@ kern_return_t GetHistory(QTSServerHistoryRec* outHistory)
     Assert(theDestinationIndex == (UInt32)sHistoryArray.numEntries);
 #endif
 
-    //ok, now set the size of the output array
+    //set the size of the output array
     outHistory->numEntries = sHistoryArray.numEntries;
     outHistory->entryInterval = sHistoryIntervalInSecs;
 
@@ -632,11 +610,8 @@ void AddHistorySample()
         sConnectionLo = theCurrentSessions;
         
     //keep track of sum for eventual average
-    //fBandwidthAvg += theCurrentBandwidth;     <---this was overflowing at high bitrates
-    //fConnectionAvg += theCurrentSessions;
     
-    // fBandwidthAvg was overflowing, 
-    // so now we do it the ugly way
+    // fBandwidthAvg was overflowing, so now we do it the ugly way
     sBandwidthAvg =(theCurrentBandwidth+(sBandwidthAvg*sSampleIndex))/(sSampleIndex+1);
     sConnectionAvg =(theCurrentSessions+(sConnectionAvg*sSampleIndex))/(sSampleIndex+1);
         
@@ -663,8 +638,7 @@ void UpdateHistoryArray()
     sHistoryArray.historyArray[sCursor].bandwidthLo = sBandwidthLo;
     sHistoryArray.historyArray[sCursor].numClientsLo = sConnectionLo;
     
-    //ok, increment the cursor for the next write (make sure to reset it if we've hit
-    //the array boundary)
+    //increment the cursor for the next write (make sure to reset it if we've hit the array boundary)
     sCursor++;
     if (sCursor == kQTSHistoryArraySize)
         sCursor = 0;
@@ -680,17 +654,13 @@ void UpdateHistoryArray()
     sConnectionHi = 0;
     sBandwidthAvg = 0;
     sConnectionAvg = 0;
-
     sSampleIndex = 0;
 }
-
-
 QTSSvrControlThread::QTSSvrControlThread()
 :   fMessagePort(0),
     fDone(false), fErrorOccurred(false), fDoneStartingUp(false), fThreadsAllocated(false)
 {
-    kern_return_t r;
-    
+    kern_return_t r;    
     r = ::port_allocate(task_self(), &fMessagePort);
     if (r != SCNoError)
     {
@@ -698,13 +668,10 @@ QTSSvrControlThread::QTSSvrControlThread()
         fErrorOccurred = true;
         fDoneStartingUp = true;
         return;
-    }
-    
+    }    
     for (int x = 0; x < 5; x++)
     {
         r = ::bootstrap_register(bootstrap_port, "QuickTimeStreamingServer", fMessagePort);
-        //sometimes when restarting the server right after the server has gone away,
-        //this can fail... so let's retry a couple of times
         if (r != SCNoError)
             thread_switch(THREAD_NULL, SWITCH_OPTION_WAIT, 1000);
         else    
@@ -718,9 +685,7 @@ QTSSvrControlThread::QTSSvrControlThread()
         fDoneStartingUp = true;
         return;
     }
-    
-    //I'm just assuming this always succeeds cause the mach documentation doesn't say
-    //anything about it failing!
+
     fThreadID = ::cthread_fork((cthread_fn_t)_Entry, (any_t)this);
     fHistoryThreadID = ::cthread_fork((cthread_fn_t)_HistoryEntry, (any_t)this);
     fThreadsAllocated = true;
@@ -762,24 +727,22 @@ void QTSSvrControlThread::HistoryEntry()
     UInt32 theSampleInterval = (sHistoryIntervalInSecs * 1000) / kNumSamplesPerEntry;
     UInt32 theEntryInterval = sHistoryIntervalInSecs * 1000;
     
-    //use local time to figure out when we need move onto a new entry. This
-    //will eliminate the possibility that we drift off time.
+    //use local time to figure out when we need move onto a new entry. 
+    //This will eliminate the possibility that we drift off time.
     
     SInt64 theStartTime = QTSS_Milliseconds();
     Assert(theStartTime > 0);
     
     while (!fDone)
     {
-        //sleep for the kHistoryUpdateInterval
-        //kHistoryUpdateInterval is in minutes. Convert to msec.
+
         thread_switch(THREAD_NULL, SWITCH_OPTION_WAIT, theSampleInterval);
         
         //if server is doing a graceful shutdown, this thread is used to periodically
         //poll, checking if all connections are complete
         CheckShutdown();
         
-        //every time we wake up, first thing we want to do is sample the
-        //current state of the server for the history
+        //every time we wake up, first thing we want to do is sample the current state of the server for the history
         AddHistorySample();
     
         SInt64 theCurrentTime = QTSS_Milliseconds();
@@ -795,8 +758,7 @@ void QTSSvrControlThread::HistoryEntry()
 
 void QTSSvrControlThread::Entry()
 {
-    kern_return_t r;
-        
+    kern_return_t r;        
     msg_header_t* msg = (msg_header_t*)new char[100];
     msg_header_t* reply = (msg_header_t*)new char[1000];    
     //signal 
@@ -813,27 +775,20 @@ void QTSSvrControlThread::Entry()
             break;  //break because there's no more port to receive from
         if (r != SCNoError)
         {
-            QTSSModuleUtils::LogError(qtssFatalVerbosity, sFatalErr, 0);
-            
+            QTSSModuleUtils::LogError(qtssFatalVerbosity, sFatalErr, 0);            
             //attempt to stop the server
             StopServer(0);
             break;
         }
-
-        QTSCRPI_server(msg, reply);
-        
+        QTSCRPI_server(msg, reply);        
         reply->msg_local_port = fMessagePort;
         r = msg_send(reply, MSG_OPTION_NONE, 0);
     }
-
     if (fMessagePort != 0)
         port_deallocate(task_self(), fMessagePort);
 }
 
-
-
-//The following are the "modern" server control RPCs that map directly to server
-//control interface calls.
+//The following are the "modern" server control RPCs that map directly to server control interface calls.
 
 kern_return_t _SCRPIStopServer(port_t /*server*/, int numMinutes)
 {
@@ -844,7 +799,6 @@ kern_return_t _SCRPICancelStopServer(port_t /*server*/)
 {
     return CancelStopServer();
 }
-
 
 kern_return_t _SCRPIGetServerAttribute( port_t /*server*/, AttributeType attr, int bufSize,
                                         AttributeValue* buffer, unsigned int* actualSize)
