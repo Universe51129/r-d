@@ -1,34 +1,18 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+A QTSS module code for handling RTSP requests, 
+the main function is to rewrite the requested file path and root directory 
+according to the requested path and to verify that the request is legitimate. 
+The Register() function sets the roles and attributes, 
+the Initialize() function initializes the module, 
+the RereadPrefs() function reads the module attributes and reloads them, 
+and the AuthorizeRequest() function verifies that the request is legitimate.
+*/
 /*
     File:       QTSSHomeDirectoryModule.cpp
 
     Contains:   Module that expands ~ in request URLs to home directories
 	    
- */
-    
+ */    
 #include <stdio.h>      
 #include <stdlib.h>
 #include "SafeStdLib.h"
@@ -98,8 +82,6 @@ QTSS_Error QTSSHomeDirectoryModule_Main(void* inPrivateArgs)
 {
     return _stublibrary_main(inPrivateArgs, QTSSHomeDirectoryDispatch);
 }
-
-
 QTSS_Error QTSSHomeDirectoryDispatch(QTSS_Role inRole, QTSS_RoleParamPtr inParams)
 {
     switch (inRole)
@@ -132,7 +114,6 @@ QTSS_Error QTSSHomeDirectoryDispatch(QTSS_Role inRole, QTSS_RoleParamPtr inParam
     return QTSS_NoErr;
 }
 
-
 QTSS_Error Register(QTSS_Register_Params* inParams)
 {
     // Do role & attribute setup
@@ -163,7 +144,6 @@ QTSS_Error Register(QTSS_Register_Params* inParams)
     return QTSS_NoErr;
 }
 
-
 QTSS_Error Initialize(QTSS_Initialize_Params* inParams)
 {
     // Setup module utils
@@ -186,8 +166,6 @@ QTSS_Error Initialize(QTSS_Initialize_Params* inParams)
 	
 	return QTSS_NoErr;
 }
-
-
 QTSS_Error RereadPrefs()
 {
 	QTSSModuleUtils::GetAttribute(sPrefs, "enabled", qtssAttrDataTypeBool16, 
@@ -200,7 +178,6 @@ QTSS_Error RereadPrefs()
 								&sMaxBWInKbpsPerHomeDir, &kDefaultMaxBWInKbpsPerHomeDir, sizeof(sMaxBWInKbpsPerHomeDir));
 	return QTSS_NoErr;
 }
-
 
 QTSS_Error RewriteRequestFilePathAndRootDir(QTSS_StandardRTSP_Params* inParams)
 {
@@ -240,7 +217,6 @@ QTSS_Error RewriteRequestFilePathAndRootDir(QTSS_StandardRTSP_Params* inParams)
 
 	return QTSS_NoErr;
 }
-
 void RewriteRootDir(QTSS_StandardRTSP_Params* inParams, StrPtrLen* inHomeDir)
 {
     QTSS_RTSPRequestObject theRequest = inParams->inRTSPRequest;
@@ -300,9 +276,7 @@ void RewriteRootDir(QTSS_StandardRTSP_Params* inParams, StrPtrLen* inHomeDir)
 	qtss_printf("QTSSHomeDirectoryModule::RewriteRootDir qtssRTSPReqRootDir = %s\n", newRequestRootDir);
 	QTSS_Delete(newRequestRootDir);
 #endif
-
 }
-
 
 QTSS_Error AuthorizeRequest(QTSS_StandardRTSP_Params* inParams)
 {
@@ -363,14 +337,13 @@ QTSS_Error RemoveClientSessionFromMap(QTSS_ClientSessionClosing_Params* inParams
 			sDirectoryInfoMap->Release(theDirectoryInfoRef);
 			(void)sDirectoryInfoMap->TryUnRegister(theDirectoryInfoRef);
 		}
-	}
-	
+	}	
 	return QTSS_NoErr;
 }
 
 // Expand path expands the ~ or ~username to the home directory of the user
-// It allocates memory for the outPathPtr->Ptr, so the caller should delete it
-// inPathPtr has the tilde stripped off, so inPathPtr->Len == 0 is valid
+// It allocates memory for the outPathPtr->Ptr, 
+// so the caller should delete it inPathPtr has the tilde stripped off, so inPathPtr->Len == 0 is valid
 Bool16 ExpandPath(const StrPtrLen *inPathPtr, StrPtrLen *outPathPtr)
 {    
     Assert(inPathPtr != NULL);
@@ -386,22 +359,6 @@ Bool16 ExpandPath(const StrPtrLen *inPathPtr, StrPtrLen *outPathPtr)
         if (passwdStruct != NULL)
             newPath = passwdStruct->pw_dir;
     }
-
-
-/*
-	if (inPathPtr->Len == 0)
-	{
-		newPath = getenv("HOME");
-        
-		if (newPath == NULL)
-        {
-            struct passwd *passwdStruct = getpwuid(getuid());
-            if (passwdStruct != NULL)
-                newPath = passwdStruct->pw_dir;
-        }
-	}
-*/
-
     if (newPath == NULL)
         return false;
 
