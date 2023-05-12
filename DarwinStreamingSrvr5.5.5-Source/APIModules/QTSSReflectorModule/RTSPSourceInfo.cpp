@@ -1,36 +1,7 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-/*
-    File:       RTSPSourceInfo.cpp
-
-    Contains:   
-
-    
-
+implements an RTSP client to connect to the server 
+and the process of session establishment and SDP protocol handling.
 */
-
 #include "RTSPSourceInfo.h"
 #include "StringParser.h"
 #include "SDPSourceInfo.h"
@@ -53,8 +24,7 @@ static StrPtrLen sTtl("ttl");
 
 char* RTSPOutputInfo::CopyString(const char* srcStr)
 {
-    char* dstStr = NULL;
-    
+    char* dstStr = NULL;    
     if(srcStr != NULL)
     {
         UInt32 len = ::strlen(srcStr);
@@ -62,7 +32,6 @@ char* RTSPOutputInfo::CopyString(const char* srcStr)
         ::memcpy(dstStr, srcStr, len);
         dstStr[len] = '\0';
     }
-
     return dstStr;
 }
 
@@ -104,7 +73,6 @@ RTSPSourceInfo::RTSPSourceInfo(const RTSPSourceInfo& copy)
     
     if ((copy.fLocalSDP).Ptr != NULL)
         fLocalSDP.Set((copy.fLocalSDP).GetAsCString(), (copy.fLocalSDP).Len);
-
 }
 
 RTSPSourceInfo::~RTSPSourceInfo()
@@ -246,8 +214,7 @@ QTSS_Error  RTSPSourceInfo::Describe()
         if (fClient->GetStatus() != 200)
             return QTSS_RequestFailed;
             
-        // If the above function returns QTSS_NoErr, we've gotten the describe response,
-        // so process it.
+        // If the above function returns QTSS_NoErr, we've gotten the describe response, so process it.
         SDPSourceInfo theSourceInfo(fClient->GetContentBody(), fClient->GetContentLength());
         
         // Copy the Source Info into our local SourceInfo.
@@ -319,8 +286,8 @@ QTSS_Error RTSPSourceInfo::SetupAndPlay()
 {
     QTSS_Error theErr = QTSS_NoErr;
     
-    // Do all the setups. This is async, so when a setup doesn't complete
-    // immediately, return an error, and we'll pick up where we left off.
+    // Do all the setups. This is async, so when a setup doesn't complete immediately, 
+    // return an error, and we'll pick up where we left off.
     while (fNumSetupsComplete < fNumStreams)
     {
         theErr = fClient->SendUDPSetup(fStreamArray[fNumSetupsComplete].fTrackID, fStreamArray[fNumSetupsComplete].fPort);
@@ -483,8 +450,6 @@ Bool16 RTSPSourceInfo::Equal(SourceInfo* inInfo)
 //  RTSPSourceInfo* info = dynamic_cast<RTSPSourceInfo *>(inInfo);
     RTSPSourceInfo* info = (RTSPSourceInfo *)(inInfo);
         
-//  if (info == NULL)
-//      return false;
             
     if (!fAnnounce)
     {       
@@ -503,12 +468,20 @@ Bool16 RTSPSourceInfo::Equal(SourceInfo* inInfo)
     return false;
 }
 
+//This function is used to set the basic parameters of the streaming source, 
+//including the host address, host port and URL address.
+
 void RTSPSourceInfo::SetSourceParameters(UInt32 inHostAddr, UInt16 inHostPort, StrPtrLen& inURL)
 {
     fHostAddr = inHostAddr;
     fHostPort = inHostPort;
     fSourceURL = inURL.GetAsCString();
 }
+
+//This function starts a RelaySessionCreator task, 
+//which will establish a connection with the server based on the parameters of the streaming source
+//and SDP protocol information, and send Describe,
+//Setup and Play requests to finally start playing audio and video data.
 
 void RTSPSourceInfo::StartSessionCreatorTask(OSQueue* inSessionQueue, OSQueue* inSourceQueue)
 {
@@ -529,6 +502,13 @@ void RTSPSourceInfo::StartSessionCreatorTask(OSQueue* inSessionQueue, OSQueue* i
     fRelaySessionCreatorTask->Signal(Task::kStartEvent);
 }
 
+//This is the run function of the RelaySessionCreator task, 
+//which is responsible for sending Describe, 
+//Setup and Play requests and handling the response from the server. 
+//If the connection is established successfully, 
+//RelaySession and RelayOutput objects are also assigned to the connection to support the distribution of multiple output streams. 
+//If one of these requests returns an error or times out, 
+//the task will exit and the RelaySession and RelayOutput for that connection cannot be started.
 SInt64 RTSPSourceInfo::RelaySessionCreator::Run()
 {
     OSMutexLocker locker(RelayOutput::GetQueueMutex());
@@ -666,8 +646,7 @@ SInt64 RTSPSourceInfo::RunCreateSession()
     
     if (fSessionCreationState == kDone)
     {
-        // If session was correctly set up, 
-        // add the outputs
+        // If session was correctly set up, add the outputs
         if(fSession != NULL)
         {
             // Format SourceInfo HTML for the stats web page
@@ -702,9 +681,6 @@ SInt64 RTSPSourceInfo::RunCreateSession()
     }
     else if (osErr != OS_NoErr)
     {   
-        // We encountered some fatal error with the socket. Record this as a connection failure
-        // delete the session
-        // delete the session
         if(fSession != NULL)
         {
             delete fSession;
@@ -718,7 +694,6 @@ SInt64 RTSPSourceInfo::RunCreateSession()
     
     return result;
 }
-
 
 RTSPSourceInfo::TeardownTask::TeardownTask(TCPClientSocket* clientSocket, RTSPClient* client)
 {
@@ -736,7 +711,6 @@ RTSPSourceInfo::TeardownTask::~TeardownTask()
 SInt64 RTSPSourceInfo::TeardownTask::Run()
 {
     OS_Error err = fClient->SendTeardown();
-
     if ((err == EINPROGRESS) || (err == EAGAIN))
     {
         // Request an async event
