@@ -1,29 +1,3 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-
-
 #include "playlist_broadcaster.h"
 #include "OS.h"
 #include "OSThread.h"
@@ -104,10 +78,7 @@ int QTFileBroadcaster::SetUp(PLBroadcastDef *broadcastDefPtr, bool *quitImmediat
                 
             if (!::strcmp(broadcastDefPtr->mDestSDPFile, "no_name"))
             { result = eNetworkSDPFileNameInvalidMissing; break; }; 
-                        
-//          if ('/' == broadcastDefPtr->mDestSDPFile[0])
-//          { result = eNetworkSDPFileNameInvalidBadPath; break; };
-        }
+
             
         result = fStreamSDPParser.ReadSDP(broadcastDefPtr->mSDPFile);
             
@@ -169,8 +140,7 @@ int QTFileBroadcaster::SetUp(PLBroadcastDef *broadcastDefPtr, bool *quitImmediat
                 if (broadcastDefPtr->mTheSession != NULL)
                 {
                     mediaTypePtr->fPort = broadcastDefPtr->mTheSession->GetStreamDestPort(streamIndex);
-                    //qtss_printf("QTFileBroadcaster::SetUp streamIndex=%u port=%d\n",streamIndex,mediaTypePtr->fPort);
-                
+
                     if (BroadcasterSession::kTCPTransportType == broadcastDefPtr->mTheSession->GetTransportType())
                     {   aSocketPair->SetRTSPSession(broadcastDefPtr->mTheSession, (UInt8) streamIndex * 2);
                         setupUDP = false;
@@ -536,23 +506,20 @@ Float64 QTFileBroadcaster::Sleep(Float64 transmitTimeMilli)
     if (intervalTime >= minSleepIntervalMilli)
     {   sleepMilli = (SInt32) intervalTime;
         MilliSleep(sleepMilli);
-        //qtss_printf("sleepMilli %u \n",sleepMilli);
     }
     fMediaStreamList.UpdateSenderReportsOnStreams();
     
     return sleepTime;
 }
 
-/* changed by emil@popwire.com (see relaod.txt for info) */
 int QTFileBroadcaster::Play(char *mTimeFile)
-/* ***************************************************** */
 {
     SInt16  err = 0;
     Float64 transmitTime = 0;
     MediaStream *theStreamPtr = NULL;   
     RTpPacket   rtpPacket;
     unsigned int sleptTime;
-    SInt32 movieStartOffset = 0; //z
+    SInt32 movieStartOffset = 0; 
     Bool16      negativeTime = false;
     fMovieDuration = fRTPFilePtr->GetMovieDuration();
     fSendTimeOffset = 0.0;
@@ -572,8 +539,7 @@ int QTFileBroadcaster::Play(char *mTimeFile)
     
     fMovieStartTime = PlayListUtils::Milliseconds();    
     fMediaStreamList.MovieStarted(fMovieStartTime); 
-    
-/* changed by emil@popwire.com (see relaod.txt for info) */
+
     if(mTimeFile!=NULL)
     {
         FILE *fTimeFile = NULL;
@@ -599,9 +565,7 @@ int QTFileBroadcaster::Play(char *mTimeFile)
         tm_dur.tm_hour = dur.tv_sec / 3600;
         tm_dur.tm_min = (dur.tv_sec % 3600) / 60;
         tm_dur.tm_sec = (dur.tv_sec % 3600) % 60;
-        
-        // initialize all current movie parameters to unkown ("-").
-        
+       
         ::strcpy(fCurrentMovieName, "-");
         ::strcpy(fCurrentMovieCopyright, "-");
         ::strcpy(fCurrentMovieComment, "-");
@@ -609,7 +573,6 @@ int QTFileBroadcaster::Play(char *mTimeFile)
         ::strcpy(fCurrentMovieArtist, "-");
         ::strcpy(fCurrentMovieAlbum, "-");
 
-        /* save start time, stop time and length of currently playing song to .current file */
         fTimeFile = fopen(mTimeFile, "a");
         if(fTimeFile)
         {   
@@ -619,8 +582,7 @@ int QTFileBroadcaster::Play(char *mTimeFile)
                 char tmp[256];
                 ::memcpy(tmp, theQTTextPtr->fTheString, theQTTextPtr->fLen);
                 tmp[theQTTextPtr->fLen] = 0;
-                // if this SDP parameter is needed for logging then cache it here so
-                // we can log it later.
+
                 if (::strstr(theQTTextPtr->fTheString, "a=x-qt-text-nam:")!=NULL)
                     ::strcpy(fCurrentMovieName, &tmp[16]);
                 if (::strstr(theQTTextPtr->fTheString, "a=x-qt-text-cpy:")!=NULL)
@@ -660,13 +622,12 @@ int QTFileBroadcaster::Play(char *mTimeFile)
             thePacketQLen = fBroadcastDefPtr->mTheSession->GetPacketQLen();
             SInt64 maxSleep = PlayListUtils::Milliseconds() + 1000; 
             if (thePacketQLen > eMaxPacketQLen)
-            {   //qtss_printf("PacketQ too big = %lu \n", (UInt32) thePacketQLen);
+            {  
                 while ( (eMaxPacketQLen/2) < fBroadcastDefPtr->mTheSession->GetPacketQLen())
                 {   this->SleepInterval(100.0);
                     if (maxSleep < PlayListUtils::Milliseconds())
                         break;
                 }
-                //qtss_printf("PacketQ after sleep = %lu \n", (UInt32) fBroadcastDefPtr->mTheSession->GetPacketQLen());
                 continue;
             }
         }
@@ -703,8 +664,6 @@ int QTFileBroadcaster::Play(char *mTimeFile)
     fMovieEndTime = (SInt64) PlayListUtils::Milliseconds(); 
     fMediaStreamList.MovieEnded(fMovieEndTime);
 
-    // see if the movie duration is greater than the time it took to send the packets.
-    // the difference is a delay that we insert before playing the next movie.
     SInt64 playDurationMilli = (SInt64) fMovieEndTime - (SInt64) fMovieStartTime;
     fMovieTimeDiffMilli =  ((SInt64) ( (Float64) fMovieDuration * (Float64) PlayListUtils::eMilli)) - (SInt64) playDurationMilli;
     fMovieTimeDiffMilli-= (movieStartOffset/2);
@@ -712,9 +671,7 @@ int QTFileBroadcaster::Play(char *mTimeFile)
     return err;
 }
 
-/* changed by emil@popwire.com (see relaod.txt for info) */
 int QTFileBroadcaster::PlayMovie(char *movieFileName, char *currentFile)
-/* ***************************************************** */
 {
     
     int err = eMovieFileInvalidName;
@@ -724,9 +681,8 @@ int QTFileBroadcaster::PlayMovie(char *movieFileName, char *currentFile)
         err = SetUpAMovie(movieFileName);
         
         if (!err && fPlay)
-/* changed by emil@popwire.com (see relaod.txt for info) */
+
         {    err = Play(currentFile);
-/* ***************************************************** */
         }
     }
     return err;
