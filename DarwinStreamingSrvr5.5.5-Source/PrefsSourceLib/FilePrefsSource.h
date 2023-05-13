@@ -1,39 +1,3 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-/*
-    File:       FilePrefsSource.h
-
-    Contains:   Implements the PrefsSource interface, getting the prefs from a file.
-
-    Written by: Chris LeCroy
-
-
-    
-
-*/
-
 #ifndef __FILEPREFSSOURCE_H__
 #define __FILEPREFSSOURCE_H__
 
@@ -52,7 +16,6 @@ class FilePrefsSource : public PrefsSource
         virtual int     GetValue(const char* inKey, char* ioValue);
         virtual int     GetValueByIndex(const char* inKey, UInt32 inIndex, char* ioValue);
 
-        // Allows caller to iterate over all the values in the file.
         char*           GetValueAtIndex(UInt32 inIndex);
         char*           GetKeyAtIndex(UInt32 inIndex);
         UInt32          GetNumKeys() { return fNumKeys; }
