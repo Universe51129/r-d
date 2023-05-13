@@ -1,33 +1,3 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-
-/*
-
-    8.2.99 - rt updated ShowSettings() to display user names for fields instead of C++ member names.
-*/
-
 #include "PLBroadcastDef.h"
 #include "MyAssert.h"
 #include "SocketUtils.h"
@@ -290,13 +260,6 @@ Bool16 PLBroadcastDef::SetDefaults( const char* setupFileName )
         
     int     baseLen = strlen(nameBuff);
 
-/*
-    
-    if you want to add .log to the base name of the 
-    description file with the .ext stripped, un comment 
-    this code.
-    rt 8.12.99
-*/
     char    *ext = NULL;
     ext = ::strrchr( nameBuff, '.' );
     if ( ext )
@@ -314,13 +277,7 @@ Bool16 PLBroadcastDef::SetDefaults( const char* setupFileName )
     ::strcat( nameBuff, ".ply" );   
     if ( !didFail ) 
         didFail = this->SetValue( &mPlayListFile, nameBuff );
-    
 
-//  nameBuff[baseLen] = 0;
-//  ::strcat( nameBuff, ".mov" );   
-//  if ( !didFail ) 
-//      didFail = this->SetValue( &mSDPReferenceMovie, nameBuff );
-    
     nameBuff[baseLen] = 0;
     ::strcat( nameBuff, ".sdp" );
     if ( !didFail ) 
