@@ -1,27 +1,3 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
 #include "playlist_utils.h"
 #include "playlist_SDPGen.h"
 #include "playlist_broadcaster.h"
@@ -118,21 +94,12 @@ char *SDPGen::Process(  char *sdpFileName,
     do
     {   
         fSDPFileContentsBuf = new char[eMaxSDPFileSize];
-         // SDP required RFC 2327
-        //    v=  (protocol version)
-        //    o=<username> <session id = random time> <version = random time *> <network type = IN> <address type = IP4> <local address>
-        //    s=  (session name)
-        //    c=IN IP4 (destinatin ip address)
-        // * see RFC for recommended Network Time Stamp (NTP implementation not required)
-
-        //    v=  (protocol version)
         {   char version[] = "v=0\r\n";
         
             currentPos = AddToBuff(fSDPFileContentsBuf, currentPos, version);
             if (currentPos < 0) break;
         }
             
-        //    o=<username> <session id = random time> <version = random time *> <network type = IN> <address type = IP4> <address>
         {   char *userName = "QTSS_Play_List";
             UInt32 sessIDAsRandomTime = RandomTime();
             UInt32 versAsRandomTime = RandomTime();
@@ -144,9 +111,7 @@ char *SDPGen::Process(  char *sdpFileName,
             currentPos = AddToBuff(fSDPFileContentsBuf, currentPos, ownerLine);
             if (currentPos < 0) break;
         }
-        
 
-        //    s=  (session name)
         {   enum { eMaxSessionName = 64};
             char newSessionName[eMaxSessionName];
             short nameSize = 0;
@@ -220,21 +185,17 @@ char *SDPGen::Process(  char *sdpFileName,
                 sdpBuffString.SetString(newBuffPtr, newBuffSize);   
 
                 char firstChar = aLine[0];
-                { // we are setting these so ignore any defined                     
+                {                   
                     if (firstChar == 'v') continue;// (protocol version)
                     if (firstChar == 'o') continue; //(owner/creator and session identifier).
                     if (firstChar == 's') continue; //(session name)
                     if (firstChar == 'c') continue; //(connection information - optional if included at session-level)
                 }
                 
-                {   // no longer important as a play list broadcast
-                    // there may be others that should go here.......
+                {   
                     if (firstChar == 't') continue;// (time the session is active)              
                     if (firstChar == 'r') continue;// (zero or more repeat times)
 
-                    // found =  strstr(aLine, "a=cliprect"); // turn this off
-                    // if (found != NULL) continue;
-                    
                     found = strstr(aLine, "a=control:trackID"); // turn this off
                     if (!fKeepTracks)
                     {   
@@ -253,35 +214,28 @@ char *SDPGen::Process(  char *sdpFileName,
                     
                     found = strstr(aLine,  "a=range"); // turn this off
                     if (found != NULL) continue;
-                    
-                    // found = strstr(aLine,  "a=x"); // turn this off - 
-                    // if (found != NULL) continue;
                 }
                 
-                { // handle the media line and put in the port value past the media type
+                { 
                     found = strstr(aLine,"m=");  //(media name and transport address)
                     if (found != NULL)
                     {   
                         char *startToPortVal = strtok(aLine," ");
-                        strtok(NULL," "); // step past the current port value we put it in below
+                        strtok(NULL," "); 
                         if (found != NULL) 
                         {   char mediaLine[eMaxLineLen];                
-                            char *protocol = strtok(NULL,"\r\n"); // the transport protocol
+                            char *protocol = strtok(NULL,"\r\n"); 
                             
                             qtss_sprintf(mediaLine,"%s %d %s\r\n",startToPortVal,portCount,protocol);
-                            currentPos = AddToBuff(fSDPFileContentsBuf, currentPos, mediaLine); // copy rest of line starting with the transport protocol
+                            currentPos = AddToBuff(fSDPFileContentsBuf, currentPos, mediaLine); 
                             if (portCount != 0)
-                                portCount += 2; // set the next port value ( this port + 1 is the RTCP port for this port so we skip by 2)
+                                portCount += 2; 
                             continue;
                         }
                     }
                 }
 
-                {   // this line looks ok so just get it and make sure it has a carriage return + new line at the end
-                    // also remove any garbage that might be there
-                    // this is a defensive measure because the hinter may have bad line endings like a single \n or \r or 
-                    // there might also be chars after the last line delimeter and before a \0 so we get rid of it.
-                    
+                {   
                     short lineLen = strlen(aLine);
                     
                     // get rid of trailing characters
