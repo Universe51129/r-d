@@ -1,28 +1,3 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-
 #include "playlist_elements.h"
 #include "playlist_utils.h"
 #include "OS.h"
@@ -31,11 +6,7 @@
 #include <unistd.h>
 #endif
 
-// ************************
-//
-// MediaStream
-//
-// ************************
+
 #define DROP_RTCP_TEST 0
 #define DROPCOUNT  1// drop count RTCPs 
 
@@ -58,14 +29,13 @@ UInt32 MediaStream::GetACName(char* ioCNameBuffer)
     
     //cName identifier
     ioCNameBuffer[0] = 1;
-    
-    //Unique cname is constructed from the base name and the current time
+
     qtss_sprintf(&ioCNameBuffer[2], " %s%"_64BITARG_"d", "QTSS", OS::Milliseconds() / 1000);
     UInt32 cNameLen = ::strlen(&ioCNameBuffer[2]);
-    //2nd byte of CName should be length
-    ioCNameBuffer[1] = (UInt8) cNameLen ;//doesn't count indicator or length byte
-    cNameLen += 2; // add the identifier and len bytes to the result len
-    //pad length to a 4 byte boundary
+
+    ioCNameBuffer[1] = (UInt8) cNameLen ;
+    cNameLen += 2; 
+
     UInt32 padLength = cNameLen % 4;
     if (padLength > 0)
         cNameLen += 4 - padLength;
@@ -74,7 +44,7 @@ UInt32 MediaStream::GetACName(char* ioCNameBuffer)
 }
 
 void MediaStream::TestAndIncSoundDescriptor(RTpPacket *packetPtr)
-{ // currently not executed
+{ 
     short test = 0;
     do 
     {
@@ -126,7 +96,6 @@ void MediaStream::UpdatePacketInStream(RTpPacket *packetPtr)
     
     packetPtr->SetHeaderInfo(newRTpTimeStamp, newRTpSequenceNumber,newSSRC,newPayload);
 
-    //TestAndIncSoundDescriptor(packetPtr); // put in to track QuickTime format sound descriptors and flag change in sample types
 }
 
 void MediaStream::MapToStream(UInt32 curRTpTimeStamp, UInt16 curRTpSequenceNumber, unsigned char curPayload, UInt32 *outRTpTimeStampPtr, UInt16 *outRTpSequenceNumberPtr, unsigned char *outPayloadPtr)
@@ -153,8 +122,6 @@ void MediaStream::MapToStream(UInt32 curRTpTimeStamp, UInt16 curRTpSequenceNumbe
         outPayload |= (curPayload & 0x80);// the movie payload marker
     }
 
-//  qtss_printf("MediaStream::MapToStream outTime = %lu\n", outTime);
-//  qtss_printf("MediaStream::MapToStream calculated time = %lu\n",(UInt32) curTimeInScale); 
 
     if (outRTpTimeStampPtr) *outRTpTimeStampPtr = outTime;
     if (outRTpSequenceNumberPtr) *outRTpSequenceNumberPtr = outSeq;
@@ -170,7 +137,6 @@ void MediaStream::BuildStaticRTCpReport()
     UInt32* theSRWriter = (UInt32*)&fData.fSenderReportBuffer;
     *theSRWriter = htonl(0x80c80006);
     theSRWriter += 7;
-    //SDES length is the length of the CName, plus 2 32bit words
     *theSRWriter = htonl(0x81ca0000 + (cNameLen >> 2) + 1);
     ::memcpy(&fData.fSenderReportBuffer[kSenderReportSizeInBytes], theTempCName, cNameLen);
     fData.fSenderReportSize = kSenderReportSizeInBytes + cNameLen;
@@ -204,8 +170,6 @@ void MediaStream::StreamStart(SInt64 startTime)
     fData.fMovieEndTime = startTime;
     fData.fLastSenderReportTime = 0;
 
-    //for RTCp SRs, we also need to store the play time in NTP
-//  fData.fNTPPlayTime = OS::TimeMilli_To_1900Fixed64Secs(startTime);
     fData.fNTPPlayTime = PlayListUtils::TimeMilli_To_1900Fixed64Secs(startTime);
     fData.fCurStreamRTpSequenceNumber =  0;
     fData.fMovieStartOffset = 0;    
@@ -214,14 +178,8 @@ void MediaStream::StreamStart(SInt64 startTime)
     fData.fSeqRandomOffset = PlayListUtils::Random();
     fData.fRTpRandomOffset = PlayListUtils::Random();
 
-    
-//  fData.fSeqRandomOffset = -1000; // test roll over
-//  fData.fRTpRandomOffset = -100000; // test roll over
-    
     InitIfAudio();
-    
-    //Build a static RTCp sender report (this way, only the info that changes
-    //on the fly will have to be written)
+
     BuildStaticRTCpReport();    
 }
 
@@ -389,12 +347,7 @@ int MediaStream::UpdateSenderReport(SInt64 theTime)
     return result;
 }
 
-// ************************
-//
 // UDPSOCKETPAIR
-//
-// ************************
-
 
 void UDPSocketPair::Close()
 {
@@ -510,7 +463,6 @@ SInt16 UDPSocketPair::Bind(UInt32 addr)
         err = ::bind(fSocketRTp, (sockaddr *)&fLocalAddrRTp, sizeof(fLocalAddrRTp));
         if (err != 0)
         {   
-            //qtss_printf("UDPSocketPair::Bind Error binding to rtp port %d \n",PortRTp);
             InitPorts(addr);
             continue;
         }
@@ -518,7 +470,6 @@ SInt16 UDPSocketPair::Bind(UInt32 addr)
         err = ::bind(fSocketRTCp, (sockaddr *)&fLocalAddrRTCp, sizeof(fLocalAddrRTCp)); 
         if (err != 0)
         {
-            //qtss_printf("UDPSocketPair::Bind Error binding to rtcp port %d \n",PortRTp);
             Close();
             Open();
             InitPorts(addr);
@@ -527,7 +478,6 @@ SInt16 UDPSocketPair::Bind(UInt32 addr)
         
         if (err == 0) 
         {   
-            //qtss_printf("Bound to rtp port = %d, rtcp port = %d \n",PortRTp, PortRTCp);
             fState |= kBound;
             break;
         }
@@ -545,14 +495,12 @@ SInt16 UDPSocketPair::SendTo(int socket, sockaddr *destAddrPtr, char* inBuffer, 
         if (inBuffer == NULL) break;        
         if (destAddrPtr == NULL) break;         
         if (socket == kInvalidSocket) break;
-        
-        //qtss_printf("Sending data to %d. Addr = %d inLength = %d\n", ntohs(theAddr->sin_port), ntohl(theAddr->sin_addr.s_addr), inLength);
+
         ::sendto(socket, inBuffer, inLength, 0, destAddrPtr, sizeof(sockaddr));
         
         result = 0;
     } while (false);
         
-    //if (result != 0) qtss_printf("UDP SENDTO ERROR!\n");
     return result;
 }
 
@@ -616,7 +564,7 @@ SInt16 UDPSocketPair::JoinMulticast()
     int err = 0;
 
     
-    UInt32 localAddr = fLocalAddrRTp.sin_addr.s_addr; // Already in network byte order
+    UInt32 localAddr = fLocalAddrRTp.sin_addr.s_addr;
 
 #if __solaris__
     if( localAddr == htonl(INADDR_ANY) )
@@ -754,11 +702,7 @@ SInt16 UDPSocketPair::OpenAndBind( UInt16 rtpPort,UInt16 rtcpPort,char *destAddr
     return err;
 };
 
-// ************************
-//
 // RTpPacket
-//
-// ************************
 
 SInt16 RTpPacket::GetSoundDescriptionRef(SoundDescription **soundDescriptionPtr)
 {
@@ -787,7 +731,6 @@ bool RTpPacket::HasSoundDescription()
     if (fThePacket)
     {
     
-//      WritePacketToLog(fThePacket, fLength);
         long minSoundLength = sizeof(SoundHeader) + sizeof(SoundDescription) + kRTpHeaderSize;
         if (fLength >= minSoundLength ) 
         {
@@ -852,10 +795,7 @@ SInt16 RTpPacket::SetHeaderInfo(UInt32 timeStamp, UInt16 sequence, UInt32 SSRC, 
     {
         LogInt("sequence = ", sequence, " ");
         LogUInt("time = ", timeStamp, " ");
-//      LogUInt("old payload = ",( UInt32 ) (header8Ptr[cPayloadType] & 0x7F)," ");
         LogUInt("payload = ",( UInt32 ) (payloadTypeAndMark & 0x7F) ," ");
-//      LogUInt("old marker = ", ( UInt32 ) (header8Ptr[cPayloadType] & 0x80) ," ");
-//      LogUInt("marker = ", ( UInt32 ) (payloadTypeAndMark & 0x80) ," ");
         LogUInt("ssrc = ", SSRC, "\n");
 
         header8Ptr[cPayloadType] = payloadTypeAndMark;
