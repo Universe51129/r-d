@@ -1,40 +1,8 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-
-
-
-
-
 #include "PickerFromFile.h"
-
-
 #include <stdlib.h> 
 #include "GetWord.h"
 #include "Trim.h"
 #include "MyAssert.h"
-
 #include <sys/stat.h>
 #ifndef __Win32__
     #include <dirent.h>
@@ -146,29 +114,21 @@ int PopulatePickerFromFile( PlaylistPicker* picker, char* fname, const char* bas
     if ( !PathIsAbsolute(fname) )
     {
 #endif
-        // it's a partial path, expand it to include all
-        // previously traversed paths
         ::strncpy( path, basePath, kMaxPickerPath-1 );
         ::strncat( path, fname, kMaxPickerPath-1 );
             
     }
     else
     {
-        // it's an absolute reference. use the path
-        // part of this for the new basePath
         ::strncpy( path, fname, kMaxPickerPath-1 );
         
     }
-    
-    // path is now either an absolute or working directory
-    // referenced partial path to the playlist file.
+
     int len = strlen(path);
     char lastChar = path[len-1];
     if (lastChar == '\n' || lastChar == '\r' || lastChar == ' ')
         path[len-1] = '\0';
 
-    // ldList is passed as NULL by the initial caller.  recursive calls
-    // pass along the ldList we create hre
     if ( ldList == NULL )
         ldList = new LoopDetectionList;
 
@@ -182,9 +142,6 @@ int PopulatePickerFromFile( PlaylistPicker* picker, char* fname, const char* bas
     {
         if ( ldList->ForEachUntil( CompareNameToElement, path ) )
         {
-            // we're already in the include chain, this is a loop
-            // print a warning (error?) and continue past the loop.
-            //qtss_printf("- Playlists include loop at file: %s\n", path );
             pickErr = kPickerPopulateLoopDetected;
         }
     }
@@ -256,8 +213,6 @@ int PopulatePickerFromFile( PlaylistPicker* picker, char* fname, const char* bas
             
             if ( 0 != ::strncmp(thisLine,"*PLAY-LIST*",11) )
             {   
-                //qtss_printf("- Playlist file missing *PLAY-LIST* identifier as first line:\n");
-                //qtss_printf("  %s%s\n", basePath, fname);
                 pickErr = kPickerPopulateBadFormat;
             }
         }
@@ -271,19 +226,13 @@ int PopulatePickerFromFile( PlaylistPicker* picker, char* fname, const char* bas
                 
                 if ( ::fgets( lineBuff, lineBuffSize, weightings ) == NULL )
                     break;
-                
-//                qtss_printf("line = %s\n", lineBuff);
                 lineCount++;
                 
                 next = ::TrimLeft( lineBuff );
                 
                 if ( *next == '#' )
                 {
-                    // it's a comment - just toss
-                    
-                    //if ( *next )
-                    //  qtss_printf( "comment: %s" , &lineBuff[1] );
-                    
+    
                 }
                 else if (*next == '+') // a list
                 {
@@ -293,10 +242,7 @@ int PopulatePickerFromFile( PlaylistPicker* picker, char* fname, const char* bas
                         next = ::GetQuotedWord( wordBuff, next, wordBuffSize );
                     else
                         next = ::GetWord( wordBuff, next, wordBuffSize );
-                        
-                    
-                    
-                    // recusively populate from the include file.
+
                     pickErr = PopulatePickerFromFile( picker, wordBuff, path, ldList );
                     
                     if ( pickErr )
@@ -332,10 +278,6 @@ int PopulatePickerFromFile( PlaylistPicker* picker, char* fname, const char* bas
                         #else
                         if ( !PathIsAbsolute(wordBuff) )
                         {
-                            // it's a partial path..
-                            
-                            // cat the path and fname to form the 
-                            // full or partial path to the movie
                             ::strcpy( expandedFileName, path );
                             ::strcat( expandedFileName, wordBuff );
                         }
@@ -351,7 +293,6 @@ int PopulatePickerFromFile( PlaylistPicker* picker, char* fname, const char* bas
                         if ( *numBuff )
                             weight = ::atoi(numBuff);
 
- //                       qtss_printf("expanded file name = %s\n", expandedFileName);
                         if (::IsDir(expandedFileName))
                             pickErr = ::PopulatePickerFromDir(picker, expandedFileName, weight);
                         else if ( !picker->AddToList( expandedFileName, weight ) )
@@ -414,7 +355,6 @@ int PopulatePickerFromDir( PlaylistPicker* picker, char* dirPath, int weight )
     findResultHandle = ::FindFirstFile( expandedFileName, &findData);
     if ( NULL == findResultHandle || INVALID_HANDLE_VALUE == findResultHandle )
     {
-        //qtss_printf( "FindFirstFile( \"%s\" ): gle = %lu\n", searchPath, GetLastError() );
         return 0;
     }
 
