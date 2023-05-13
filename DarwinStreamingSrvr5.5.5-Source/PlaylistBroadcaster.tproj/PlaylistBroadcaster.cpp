@@ -1,55 +1,7 @@
-/*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
-
-/*
-    8.11.99 rt  - changed references to "PlaylistBroadcaster Setup" to Broadcast Description File
-
-    8.4.99 rt   - changed references to "PlaylistBroadcaster Description" to Broadcast Setup File
-                - addded error messages
-                - prefilght config file access
-                - require log file creation
-                
-                
-    7.27.99 rt  - removed license from about display
-                - updated credit names
-                - fixed mapping of --stop to 's' from 'l'
-                - added about to help
-                
-
-    8.2.99 rt   - changed reference to "channel setup" to "PlaylistBroadcaster Description"
-                - changed &d's in qtss_printf's to %d
-                
-*/
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "SafeStdLib.h"
 #include <signal.h>
-#ifndef __MacOSX__
 #include "getopt.h"
 #endif
 
@@ -92,15 +44,6 @@
     #include "getopt.h"
 #endif  
 
-// must now inlcude this from the project level using the -i switch in the compiler
-#ifndef __MacOSX__
-    #include "revision.h"
-#endif
-
-#ifdef __MacOSX__
-    #include <sys/stat.h>
-#endif
-
 #include "playlist_SDPGen.h"
 #include "playlist_broadcaster.h"
 
@@ -142,7 +85,6 @@ static void ShowSetupParams(PLBroadcastDef* broadcastParms, const char *file);
 static int PreflightDestSDPFileAccess( const char * sdpPath );
 static void PreFlightOrBroadcast( const char *bcastSetupFilePath, bool preflight, bool daemonize, bool showMovieList, bool writeCurrentMovieFile, char *destinationIP,bool writeNewSDP, const char* errorFilePath);
 
-/* changed by emil@popwire.com */
 static bool FileCreateAndCheckAccess(char *theFileName);
 static void PrintPlaylistElement(PLDoubleLinkedListNode<SimplePlayListElement> *node,void *file);
 static void ShowPlaylistElements(PlaylistPicker *picker,FILE *file);
@@ -221,11 +163,6 @@ int main(int argc, char *argv[]) {
         qtss_printf("Network initialization failed. IP must be enabled to run PlaylistBroadcaster\n");
         ::exit(0);
     }
-
-#ifdef __MacOSX__
-    (void) ::umask(S_IWOTH); // make sure files are opened with default of owner -rw-rw-r-
-#endif
-
 
     sgProgramName = argv[0];
 #ifdef __Win32__
@@ -346,7 +283,6 @@ int main(int argc, char *argv[]) {
         ::setvbuf(stdout, (char *)NULL, _IONBF, 0);
     }
         
-    // preflight needs a description file
     if ( preflight && !bcastSetupFilePath )
     {   qtss_printf("- PlaylistBroadcaster: Error.  \"Preflight\" requires a broadcast description file.\n" );
         ::usage();
@@ -431,7 +367,7 @@ Bool16 AnnounceBroadcast(PLBroadcastDef *broadcastParms,QTFileBroadcaster   *fil
     if (SocketUtils::GetNumIPAddrs() == 0)
     {
         qtss_printf("IP must be enabled to run PlaylistBroadcaster\n");
-        //::exit(0); // why exit here? If we return false here, the calling function will take care of the error
+        //::exit(0); // If we return false here, the calling function will take care of the error
                 return false;
     }
 
@@ -452,7 +388,7 @@ Bool16 AnnounceBroadcast(PLBroadcastDef *broadcastParms,QTFileBroadcaster   *fil
         }
         
         if (200 != broadcastErr)
-        {   //qtss_printf("broadcastErr = %ld sBroadcasterSession->GetDeathState()=%ld sBroadcasterSession->GetReasonForDying()=%ld\n",broadcastErr,sBroadcasterSession->GetDeathState(),sBroadcasterSession->GetReasonForDying());
+        {  
             if (sBroadcasterSession->GetDeathState() == BroadcasterSession::kSendingAnnounce && sBroadcasterSession->GetReasonForDying() == BroadcasterSession::kConnectionFailed)
                 ::EvalBroadcasterErr(QTFileBroadcaster::eNetworkConnectionError);
             else if (sBroadcasterSession->GetDeathState() == BroadcasterSession::kSendingAnnounce && sBroadcasterSession->GetReasonForDying() == BroadcasterSession::kBadSDP)
@@ -515,8 +451,7 @@ char* GetBroadcastDirPath(const char * setupFilePath)
             int  chDirErr = ::chdir( setupDirPath );            
             if ( chDirErr )
                 chDirErr = errno;
-                
-            //qtss_printf("- PLB DEBUG MSG: setupDirPath==%s\n  chdir err: %i\n", setupDirPath, chDirErr);         
+                       
         }
         else
         {   
@@ -527,7 +462,6 @@ char* GetBroadcastDirPath(const char * setupFilePath)
             
     }
     
-    //qtss_printf("GetBroadcastDirPath setupDirPath = %s\n",setupDirPath);
     return setupDirPath;
 }
 
@@ -875,9 +809,6 @@ static void PreFlightOrBroadcast( const char *bcastSetupFilePath, bool preflight
         goto bail;
     }
         
-        // ^ daemon must be called before we Open the log and tracker since we'll
-    // get a new pid, our files close,  ( does SIGTERM get sent? )
-    
     if (( sgLogger != NULL ) && ( sgLogger->WantsLogging() ))
         sgLogger->EnableLog( false ); // don't append ".log" to name for PLB
     
@@ -1174,10 +1105,7 @@ bail:
 #ifndef __Win32__
     if ( sgTrackingSucceeded )
     {
-        // remove ourselves from the tracker
-        // this is the "normal" remove, also signal handlers
-        // may remove us.
-        
+
         BCasterTracker  tracker( sgTrackerFilePath );
         
         tracker.RemoveByProcessID( getpid() );
@@ -1222,14 +1150,7 @@ static void Cleanup()
 
 static void version()
 {
-    /*
-        print PlaylistBroadcaster version and build info
-        
-        see revision.h
-    */
-    
-    //RoadRunner/2.0.0-v24 Built on: Sep 17 1999 , 16:09:53
-    //revision.h (project level file) -- include with -i option
+
     qtss_printf("PlaylistBroadcaster/%s Built on: %s, %s\n",  kVersionString, __DATE__, __TIME__ );
 
 }
@@ -2128,7 +2049,7 @@ struct sigaction act;
 
 }
 
-/* ========================================================================
+/*
  * Signal and error handler.
  */
 static void RemoveFiles(PLBroadcastDef* broadcastParms)
@@ -2150,7 +2071,7 @@ static void RemoveFiles(PLBroadcastDef* broadcastParms)
     }
 
 }
-/* ========================================================================
+/* 
  * Signal and error handler.
  */
 static void SignalEventHandler( int signalID )
