@@ -1,32 +1,13 @@
 /*
- *
- * @APPLE_LICENSE_HEADER_START@
- * 
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
- * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
- * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
- * 
- * @APPLE_LICENSE_HEADER_END@
- *
- */
+is an implementation code for reflector streaming, 
+a technique in streaming servers that forwards live video streams from one server to multiple clients.
+The specific implementation may involve network programming, 
+streaming protocols, multi-threaded programming and other techniques.
+*/
 /*
     File:       ReflectorStream.cpp
 
-    Contains:   Implementation of object defined in ReflectorStream.h. 
-                    
+    Contains:   Implementation of object defined in ReflectorStream.h.                   
     
 
 */
@@ -39,23 +20,19 @@
 #include "RTCPPacket.h"
 #include "ReflectorSession.h"
 
-
 #if DEBUG
 #define REFLECTOR_STREAM_DEBUGGING 0
 #else
 #define REFLECTOR_STREAM_DEBUGGING 0
 #endif
 
-
 static ReflectorSocketPool  sSocketPool;
-
 // ATTRIBUTES
 
 static QTSS_AttributeID         sCantBindReflectorSocketErr = qtssIllegalAttrID;
 static QTSS_AttributeID         sCantJoinMulticastGroupErr  = qtssIllegalAttrID;
 
 // PREFS
-
 static UInt32                   sDefaultOverBufferInSec             = 10; 
 static UInt32                   sDefaultBucketDelayInMsec           = 73;
 static Bool16                   sDefaultUsePacketReceiveTime        = false; 
@@ -191,15 +168,13 @@ ReflectorStream::ReflectorStream(SourceInfo::StreamInfo* inInfo)
     fEyeLocation = theRRWriter;
     fReceiverReportSize = kReceiverReportSize + kAppSize + cNameLen;
     
-    // If the source is a multicast, we should send our receiver reports
-    // to the multicast address
+  
     if (SocketUtils::IsMulticastIPAddr(fStreamInfo.fDestIPAddr))
     {
         fDestRTCPAddr = fStreamInfo.fDestIPAddr;
         fDestRTCPPort = fStreamInfo.fPort + 1;
     }
 }
-
 
 ReflectorStream::~ReflectorStream()
 {
@@ -208,8 +183,7 @@ ReflectorStream::~ReflectorStream()
     if (fSockets != NULL)
     {
         //first things first, let's take this stream off the socket's queue
-        //of streams. This will basically ensure that no reflecting activity
-        //can happen on this stream.
+        //of streams. This will basically ensure that no reflecting activity can happen on this stream.
         ((ReflectorSocket*)fSockets->GetSocketA())->RemoveSender(&fRTPSender);
         ((ReflectorSocket*)fSockets->GetSocketB())->RemoveSender(&fRTCPSender);
         
@@ -256,7 +230,6 @@ void ReflectorStream::AllocateBucketArray(UInt32 inNumBuckets)
     }
     fNumBuckets = inNumBuckets;
 }
-
 
 SInt32 ReflectorStream::AddOutput(ReflectorOutput* inOutput, SInt32 putInThisBucket)
 {
@@ -340,8 +313,7 @@ void  ReflectorStream::RemoveOutput(ReflectorOutput* inOutput)
 void  ReflectorStream::TearDownAllOutputs()
 {
 
-    OSMutexLocker locker(&fBucketMutex);
-    
+    OSMutexLocker locker(&fBucketMutex);    
     //look at all the indexes in the array
     for (UInt32 x = 0; x < fNumBuckets; x++)
     {
@@ -375,15 +347,7 @@ QTSS_Error ReflectorStream::BindSockets(QTSS_StandardRTSP_Params* inParams, UInt
     {   UInt32 theLen = sizeof(transportType);
         (void) QTSS_GetValue(inParams->inRTSPRequest, qtssRTSPReqTransportType, 0, (void*)&transportType, &theLen);
     }
-    
-    // get a pair of sockets. The socket must be bound on INADDR_ANY because we don't know
-    // which interface has access to this broadcast. If there is a source IP address
-    // specified by the source info, we can use that to demultiplex separate broadcasts on
-    // the same port. If the src IP addr is 0, we cannot do this and must dedicate 1 port per
-    // broadcast
-
-	// changing INADDR_ANY to fStreamInfo.fDestIPAddr to deal with NATs (need to track this change though)
-	// change submitted by denis@berlin.ccc.de
+  
 	Bool16 isMulticastDest = (SocketUtils::IsMulticastIPAddr(fStreamInfo.fDestIPAddr));
 	if (isMulticastDest) {
     	fSockets = sSocketPool.GetUDPSocketPair(INADDR_ANY, fStreamInfo.fPort, fStreamInfo.fSrcIPAddr, 0);
@@ -404,10 +368,6 @@ QTSS_Error ReflectorStream::BindSockets(QTSS_StandardRTSP_Params* inParams, UInt
         return QTSSModuleUtils::SendErrorResponse(inRequest, qtssServerInternal,
                                                     sCantBindReflectorSocketErr);
 
-    // If we know the source IP address of this broadcast, we can demux incoming traffic
-    // on the same port by that source IP address. If we don't know the source IP addr,
-    // it is impossible for us to demux, and therefore we shouldn't allow multiple
-    // broadcasts on the same port.
     if (((ReflectorSocket*)fSockets->GetSocketA())->HasSender() && (fStreamInfo.fSrcIPAddr == 0))
         return QTSSModuleUtils::SendErrorResponse(inRequest, qtssServerInternal,
                                                     sCantBindReflectorSocketErr);
@@ -426,14 +386,11 @@ QTSS_Error ReflectorStream::BindSockets(QTSS_StandardRTSP_Params* inParams, UInt
     ((ReflectorSocket*)fSockets->GetSocketB())->SetSSRCFilter(filterState, timeout);
 
 #if 1 
-	// Always set the Rcv buf size for the sockets. This is important because the
-	// server is going to be getting many packets on these sockets.
+
 	fSockets->GetSocketA()->SetSocketRcvBufSize(512 * 1024);
 	fSockets->GetSocketB()->SetSocketRcvBufSize(512 * 1024);
 #endif
-    
-    //If the broadcaster is sending RTP directly to us, we don't
-    //need to join a multicast group because we're not using multicast
+
 	if (isMulticastDest)
     {
         QTSS_Error err = fSockets->GetSocketA()->JoinMulticast(fStreamInfo.fDestIPAddr);
@@ -517,10 +474,6 @@ void ReflectorStream::PushPacket(char *packet, UInt32 packetLen, Bool16 isRTCP)
         }
     }
 }
-
-
-
-
 ReflectorSender::ReflectorSender(ReflectorStream* inStream, UInt32 inWriteFlag)
 :   fStream(inStream),
     fWriteFlag(inWriteFlag),
@@ -713,9 +666,7 @@ static UInt16 DGetPacketSeqNumber(StrPtrLen* inPacket)
 
 void ReflectorSender::ReflectRelayPackets(SInt64* ioWakeupTime, OSQueue* inFreeQueue)
 {   
-    //Most of this code is useless i.e. buckets and bookmarks. This code will get cleaned up eventually
-
-	//printf("ReflectorSender::ReflectPackets %qd %qd\n",*ioWakeupTime,fNextTimeToRun);
+   
 #if DEBUG
 	Assert(ioWakeupTime != NULL);
 #endif
@@ -783,15 +734,12 @@ void ReflectorSender::ReflectRelayPackets(SInt64* ioWakeupTime, OSQueue* inFreeQ
 					{							
 						if ( bookmarkedElem->IsMember( fPacketQueue ) )	
 						{	
-							// this packet was previously bookmarked for this specific queue
-							// remove if from the bookmark list and use it
-							// to jump ahead into the Sender's over all packet queue						
+													
 							theOutput->fBookmarkedPacketsElemsArray[curBookmark] = NULL;
 							availBookmarksPosition = curBookmark;
 							packetElem = bookmarkedElem;
 							break;
-						}
-						
+						}						
 					}
 					else
 					{
@@ -811,10 +759,7 @@ void ReflectorSender::ReflectRelayPackets(SInt64* ioWakeupTime, OSQueue* inFreeQ
 				}
 				#endif
 				
-				// the output did not have a bookmarked packet if it's own
-				// so show it the first new packet we have in this sender.
-				// ( since TCP flow control may delay the sending of packets, this may not
-				// be the same as the first packet in the queue
+
 				if ( packetElem  == NULL )
 				{	
 					packetElem = fFirstNewPacketInQueue;
@@ -940,27 +885,7 @@ void ReflectorSender::ReflectRelayPackets(SInt64* ioWakeupTime, OSQueue* inFreeQ
 	#endif
 }
 
-/***********************************************************************************************
-/   ReflectorSender::ReflectPackets
-/   
-/   There are n ReflectorSender's for n output streams per presentation.
-/   
-/   Each sender is associated with an array of ReflectorOutput's.  Each
-/   output represents a client connection.  Each output has # RTPStream's. 
-/   
-/   When we write a packet to the ReflectorOutput he matches it's payload
-/   to one of his streams and sends it there.
-/   
-/   To smooth the bandwitdth (server, not user) requirements of the reflected streams, the Sender
-/   groups the ReflectorOutput's into buckets.  The input streams are reflected to
-/   each bucket progressively later in time.  So rather than send a single packet
-/   to say 1000 clients all at once, we send it to just the first 16, then then next 16 
-/   100 ms later and so on.
-/
-/
-/   intputs     ioWakeupTime - relative time to call us again in MSec
-/               inFreeQueue - queue of free packets.
-*/
+
 
 void ReflectorSender::ReflectPackets(SInt64* ioWakeupTime, OSQueue* inFreeQueue)
 {
@@ -995,17 +920,7 @@ void ReflectorSender::ReflectPackets(SInt64* ioWakeupTime, OSQueue* inFreeQueue)
 
     // where to start new clients in the q
     fFirstPacketInQueueForNewOutput = this->GetClientBufferStartPacketOffset(ReflectorStream::sFirstPacketOffsetMsec); 
-  
-/*
-ReflectorPacket* thePacket = NULL;
-if (fFirstPacketInQueueForNewOutput != NULL)
-    thePacket = fFirstPacketInQueueForNewOutput->GetEnclosingObject();
-if (thePacket == NULL)
-    return;
-  
 
-    fFirstPacketInQueueForNewOutput = GetClientBufferNextPacketTime(thePacket->GetPacketRTPTime());
-*/
 
     for (UInt32 bucketIndex = 0; bucketIndex < fStream->fNumBuckets; bucketIndex++)
     {   
@@ -1143,7 +1058,7 @@ void    ReflectorSender::RemoveOldPackets(OSQueue* inFreeQueue)
         
 // Iterate through the senders queue to clear out packets
 // Start at the oldest packet and walk forward to the newest packet
-// 
+
     OSQueueIter removeIter(&fPacketQueue);
     SInt64 theCurrentTime = OS::Milliseconds();
     SInt64 packetDelay = 0;
@@ -1182,8 +1097,6 @@ void    ReflectorSender::RemoveOldPackets(OSQueue* inFreeQueue)
                 break;
         }   
     }
-    
-
 }
 
 UDPSocketPair* ReflectorSocketPool::ConstructUDPSocketPair()
@@ -1194,9 +1107,7 @@ UDPSocketPair* ReflectorSocketPool::ConstructUDPSocketPair()
 
 void ReflectorSocketPool::DestructUDPSocketPair(UDPSocketPair *inPair)
 {
-    //The socket's run function may be executing RIGHT NOW! So we can't
-    //just delete the thing, we need to send the sockets kill events.
-    //Assert(inPair->GetSocketA()->GetLocalPort() > 0);
+
     if (inPair->GetSocketA()->GetLocalPort() > 0)
     {
         ((ReflectorSocket*)inPair->GetSocketA())->Signal(Task::kKillEvent);
@@ -1236,7 +1147,7 @@ ReflectorSocket::ReflectorSocket()
 
 ReflectorSocket::~ReflectorSocket()
 {
-    //printf("ReflectorSocket::~ReflectorSocket\n");
+
     while (fFreeQueue.GetLength() > 0)
     {
         ReflectorPacket* packet = (ReflectorPacket*)fFreeQueue.DeQueue()->GetEnclosingObject();
@@ -1262,9 +1173,7 @@ void    ReflectorSocket::RemoveSender(ReflectorSender* inSender)
 
 SInt64 ReflectorSocket::Run()
 {
-    //We want to make sure we can't get idle events WHILE we are inside
-    //this function. That will cause us to run the queues unnecessarily
-    //and just get all confused.
+
     this->CancelTimeout();
     
     Task::EventFlags theEvents = this->GetEvents();
@@ -1381,11 +1290,7 @@ Bool16 ReflectorSocket::ProcessPacket(const SInt64& inMilliseconds,ReflectorPack
         
         if (thePacket->IsRTCP())
         {
-            //if this is a new RTCP packet, check to see if it is a sender report.
-            //We should only reflect sender reports. Because RTCP packets can't have both
-            //an SR & an RR, and because the SR & the RR must be the first packet in a
-            //compound RTCP packet, all we have to do to determine this is look at the
-            //packet type of the first packet in the compound packet.
+
             RTCPPacket theRTCPPacket;
             if ((!theRTCPPacket.ParsePacket((UInt8*)thePacket->fPacketPtr.Ptr, thePacket->fPacketPtr.Len)) ||
                 (theRTCPPacket.GetPacketType() != RTCPSRPacket::kSRPacketType))
@@ -1463,11 +1368,8 @@ Bool16 ReflectorSocket::ProcessPacket(const SInt64& inMilliseconds,ReflectorPack
             
 		if (!(thePacket->IsRTCP()))
 		{
-			// don't check for duplicate packets, they may be needed to keep in sync.
-			// Because this is an RTP packet make sure to atomic add this because
-			// multiple sockets can be adding to this variable simultaneously
+
 			(void)atomic_add(&theSender->fStream->fBytesSentInThisInterval, thePacket->fPacketPtr.Len);
-			//printf("ReflectorSocket::ProcessPacket received RTP id=%qu\n", thePacket->fStreamCountID); 
 			theSender->fStream->SetHasFirstRTP(true);
 		}
 		else 
@@ -1476,9 +1378,7 @@ Bool16 ReflectorSocket::ProcessPacket(const SInt64& inMilliseconds,ReflectorPack
 			theSender->fStream->SetHasFirstRTCP(true);
 			theSender->fStream->SetFirst_RTCP_RTP_Time(thePacket->GetPacketRTPTime());
 			theSender->fStream->SetFirst_RTCP_Arrival_Time(thePacket->fTimeArrived);
-		}
-
-             
+		}             
 		if (ReflectorStream::sUsePacketReceiveTime && thePacket->fPacketPtr.Len > 12)
 		{
 			UInt32 offset = thePacket->fPacketPtr.Len;
@@ -1496,8 +1396,7 @@ Bool16 ReflectorSocket::ProcessPacket(const SInt64& inMilliseconds,ReflectorPack
 					this->fFirstArrivalTime = thePacket->fTimeArrived;
 					this->fFirstReceiveTime = theReceiveTime;
 					this->fHasReceiveTime = true;
-				}
-                    
+				}                   
                        
 				SInt64 packetOffsetFromStart = theReceiveTime - this->fFirstReceiveTime; // packets arrive at time 0 and fill forward into the future
 				thePacket->fTimeArrived = this->fFirstArrivalTime + packetOffsetFromStart; // offset starts negative by over buffer amount
@@ -1507,29 +1406,19 @@ Bool16 ReflectorSocket::ProcessPacket(const SInt64& inMilliseconds,ReflectorPack
 				if ( arrivalTimeOffset > ReflectorStream::sMaxFuturePacketMSec ) // way out in the future.
 					thePacket->fTimeArrived = inMilliseconds + ReflectorStream::sMaxFuturePacketMSec; //keep it but only for sMaxFuturePacketMSec =  (sMaxPacketAgeMSec <-- current --> sMaxFuturePacketMSec)
 				
-				// if it was in the past we leave it alone because it will be deleted after processing.
-                    
-                    
-				//printf("ReflectorSocket::ProcessPacket packetOffsetFromStart=%f\n", (Float32) packetOffsetFromStart / 1000);
 			}
             
 		}
-             
-		//printf("ReflectorSocket::GetIncomingData has packet from time=%qd src addr=%lu src port=%u packetlen=%lu\n",inMilliseconds, theRemoteAddr,theRemotePort,thePacket->fPacketPtr.Len);
-		if (0) //turn on / off buffer size checking --  pref can go here if we find we need to adjust this
+             	if (0) //turn on / off buffer size checking --  pref can go here if we find we need to adjust this
 		if (theSender->fPacketQueue.GetLength() > maxQSize) //don't grow memory too big
 		{ 
 			char outMessage[256];
 			sprintf(outMessage,"Packet Queue for port=%d qsize = %ld hit max qSize=%lu", theRemotePort,theSender->fPacketQueue.GetLength(), maxQSize);
 			WarnV(false, outMessage); 
-		}
-       
-    } while(false);
-    
+		}       
+    } while(false);    
     return done;
 }
-
-
 void ReflectorSocket::GetIncomingData(const SInt64& inMilliseconds)
 {
     OSMutexLocker locker(this->GetDemuxer()->GetMutex());
@@ -1546,16 +1435,9 @@ void ReflectorSocket::GetIncomingData(const SInt64& inMilliseconds)
                             ReflectorPacket::kMaxReflectorPacketSize, &thePacket->fPacketPtr.Len);
                       
         if (this->ProcessPacket(inMilliseconds,thePacket,theRemoteAddr, theRemotePort))
-            break;
-            
-        //printf("ReflectorSocket::GetIncomingData \n");
-    }
-    
+            break;       
+    } 
 }
-
-
-
-
 ReflectorPacket* ReflectorSocket::GetPacket()
 {
     OSMutexLocker locker(this->GetDemuxer()->GetMutex());
